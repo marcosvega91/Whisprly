@@ -13,6 +13,7 @@ const fs = require("fs");
 const { execSync } = require("child_process");
 const yaml = require("js-yaml");
 const { systemPreferences } = require("electron");
+const historyDb = require("./db");
 
 // ─── Configuration ──────────────────────────────────────────────
 
@@ -28,8 +29,9 @@ function loadConfig() {
 
 let config = {};
 let mainWindow = null;
-let settingsWindow = null;
+let dashboardWindow = null;
 let currentToggleAccelerator = null;
+let currentTone = "professionale";
 
 // ─── Window ─────────────────────────────────────────────────────
 
@@ -67,24 +69,22 @@ function createWindow() {
   });
 }
 
-// ─── Settings Window ────────────────────────────────────────────
+// ─── Dashboard Window ───────────────────────────────────────────
 
-function openSettings() {
-  if (settingsWindow) {
-    settingsWindow.focus();
+function openDashboard() {
+  if (dashboardWindow) {
+    dashboardWindow.focus();
     return;
   }
 
-  // Show dock so the settings window behaves like a normal app
   if (process.platform === "darwin") app.dock.show();
 
-  settingsWindow = new BrowserWindow({
-    width: 420,
-    height: 320,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
+  dashboardWindow = new BrowserWindow({
+    width: 720,
+    height: 520,
+    minWidth: 600,
+    minHeight: 400,
+    resizable: true,
     titleBarStyle: "hiddenInset",
     vibrancy: "under-window",
     backgroundColor: "#1a1a2e",
@@ -95,12 +95,12 @@ function openSettings() {
     },
   });
 
-  settingsWindow.loadFile(
-    path.join(__dirname, "renderer", "settings.html")
+  dashboardWindow.loadFile(
+    path.join(__dirname, "renderer", "dashboard.html")
   );
 
-  settingsWindow.on("closed", () => {
-    settingsWindow = null;
+  dashboardWindow.on("closed", () => {
+    dashboardWindow = null;
     if (process.platform === "darwin") app.dock.hide();
   });
 }
@@ -194,12 +194,13 @@ function setupIPC() {
     }
   });
 
-  ipcMain.on("show-context-menu", (event, tones, currentTone) => {
+  ipcMain.on("show-context-menu", (event, tones) => {
     const toneItems = tones.map((tone) => ({
       label: tone.charAt(0).toUpperCase() + tone.slice(1),
       type: "radio",
       checked: tone === currentTone,
       click: () => {
+        currentTone = tone;
         event.sender.send("tone-changed", tone);
       },
     }));
@@ -210,8 +211,8 @@ function setupIPC() {
       { label: "Voice Tone", submenu: toneItems },
       { type: "separator" },
       {
-        label: "Settings...",
-        click: () => openSettings(),
+        label: "Dashboard...",
+        click: () => openDashboard(),
       },
       {
         label: "Quit",
@@ -224,12 +225,12 @@ function setupIPC() {
 
   ipcMain.handle("quit-app", () => app.quit());
 
-  // ─── Settings IPC ──────────────────────────────────────────────
+  // ─── Dashboard IPC ─────────────────────────────────────────────
 
-  ipcMain.handle("open-settings", () => openSettings());
+  ipcMain.handle("open-dashboard", () => openDashboard());
 
-  ipcMain.handle("close-settings", () => {
-    if (settingsWindow) settingsWindow.close();
+  ipcMain.handle("close-dashboard", () => {
+    if (dashboardWindow) dashboardWindow.close();
   });
 
   ipcMain.handle("get-current-hotkey", () => {
@@ -237,28 +238,24 @@ function setupIPC() {
   });
 
   ipcMain.handle("save-hotkey", (_, accelerator) => {
-    // 1. Try registering the new shortcut
     try {
-      // Unregister old toggle shortcut
       if (currentToggleAccelerator) {
         globalShortcut.unregister(currentToggleAccelerator);
       }
 
       const ok = globalShortcut.register(accelerator, () => {
-        if (mainWindow) mainWindow.webContents.send("toggle-recording");
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("toggle-recording");
       });
 
       if (!ok) {
-        // Re-register old one
         if (currentToggleAccelerator) {
           globalShortcut.register(currentToggleAccelerator, () => {
-            if (mainWindow) mainWindow.webContents.send("toggle-recording");
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("toggle-recording");
           });
         }
         return { success: false, error: "Shortcut already in use by another app" };
       }
 
-      // 2. Save to config.yaml (preserve formatting, only replace the hotkey line)
       const raw = fs.readFileSync(CONFIG_PATH, "utf8");
       const updated = raw.replace(
         /^(\s*toggle_recording:\s*).+$/m,
@@ -266,16 +263,74 @@ function setupIPC() {
       );
       fs.writeFileSync(CONFIG_PATH, updated, "utf8");
 
-      // 3. Update state
       currentToggleAccelerator = accelerator;
-      config.hotkeys = cfg.hotkeys;
-
       console.log(`Hotkey updated: ${accelerator}`);
       return { success: true };
     } catch (e) {
       console.error("Failed to save hotkey:", e);
       return { success: false, error: e.message };
     }
+  });
+
+  // ─── Tone IPC ─────────────────────────────────────────────────
+
+  ipcMain.handle("get-current-tone", () => currentTone);
+
+  ipcMain.handle("set-tone", (_, tone) => {
+    currentTone = tone;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("tone-changed", tone);
+    }
+    return { success: true };
+  });
+
+  // ─── History IPC ──────────────────────────────────────────────
+
+  ipcMain.handle("save-history-entry", (_, { cleanText, rawText, tone }) => {
+    try {
+      historyDb.addEntry(cleanText, rawText, tone);
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send("history-updated");
+      }
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to save history entry:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle("get-history", () => {
+    try {
+      return historyDb.getEntries();
+    } catch (e) {
+      console.error("Failed to get history:", e);
+      return [];
+    }
+  });
+
+  ipcMain.handle("delete-history-entry", (_, id) => {
+    try {
+      historyDb.deleteEntry(id);
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to delete history entry:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle("clear-history", () => {
+    try {
+      historyDb.clearAll();
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to clear history:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle("copy-to-clipboard", (_, text) => {
+    clipboard.writeText(text);
+    return { success: true };
   });
 }
 
@@ -293,7 +348,7 @@ function registerHotkeys() {
 
   if (toggleKey) {
     const ok = globalShortcut.register(toggleKey, () => {
-      if (mainWindow) mainWindow.webContents.send("toggle-recording");
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("toggle-recording");
     });
     if (ok) currentToggleAccelerator = toggleKey;
     console.log(
@@ -357,6 +412,9 @@ if (process.platform === "darwin") {
 
 app.whenReady().then(async () => {
   config = loadConfig();
+  currentTone = config.tone?.default || "professionale";
+
+  historyDb.init(app.getPath("userData"));
 
   // Show dock briefly so permission dialogs can appear
   if (process.platform === "darwin") {
@@ -380,6 +438,7 @@ app.whenReady().then(async () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  historyDb.close();
 });
 
 app.on("window-all-closed", (e) => {

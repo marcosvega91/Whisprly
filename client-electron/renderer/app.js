@@ -215,6 +215,13 @@ async function toggleRecording() {
       // Auto-paste the result
       await whisprly.autoPaste(result.clean_text);
 
+      // Save to history
+      whisprly.saveHistoryEntry({
+        cleanText: result.clean_text,
+        rawText: result.raw_text,
+        tone: currentTone,
+      });
+
       const preview = result.clean_text.slice(0, 100);
       whisprly.notify("Whisprly", `Pasted!\n${preview}`);
 
@@ -235,6 +242,14 @@ async function toggleRecording() {
   }
 }
 
+// ─── Widget Click — Open Dashboard ──────────────────────────────
+
+document.getElementById("icon-container").addEventListener("click", () => {
+  if (currentState === State.IDLE) {
+    whisprly.openDashboard();
+  }
+});
+
 // ─── Context Menu ────────────────────────────────────────────────
 
 document.getElementById("icon-container").addEventListener("contextmenu", (e) => {
@@ -252,7 +267,7 @@ async function init() {
   try {
     const tonesData = await whisprly.getTones();
     availableTones = tonesData.tones || [];
-    currentTone = tonesData.default || "professionale";
+    currentTone = await whisprly.getCurrentTone();
   } catch (_) {
     availableTones = ["professionale"];
   }

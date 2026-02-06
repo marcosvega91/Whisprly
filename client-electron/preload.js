@@ -21,11 +21,22 @@ contextBridge.exposeInMainWorld("whisprly", {
   showContextMenu: (tones, currentTone) =>
     ipcRenderer.send("show-context-menu", tones, currentTone),
 
-  // Settings
-  openSettings: () => ipcRenderer.invoke("open-settings"),
-  closeSettings: () => ipcRenderer.invoke("close-settings"),
+  // Dashboard
+  openDashboard: () => ipcRenderer.invoke("open-dashboard"),
+  closeDashboard: () => ipcRenderer.invoke("close-dashboard"),
   getCurrentHotkey: () => ipcRenderer.invoke("get-current-hotkey"),
   saveHotkey: (accelerator) => ipcRenderer.invoke("save-hotkey", accelerator),
+
+  // Tone
+  getCurrentTone: () => ipcRenderer.invoke("get-current-tone"),
+  setTone: (tone) => ipcRenderer.invoke("set-tone", tone),
+
+  // History
+  saveHistoryEntry: (data) => ipcRenderer.invoke("save-history-entry", data),
+  getHistory: () => ipcRenderer.invoke("get-history"),
+  deleteHistoryEntry: (id) => ipcRenderer.invoke("delete-history-entry", id),
+  clearHistory: () => ipcRenderer.invoke("clear-history"),
+  copyToClipboard: (text) => ipcRenderer.invoke("copy-to-clipboard", text),
 
   // Events from main process
   onToggleRecording: (callback) =>
@@ -33,4 +44,7 @@ contextBridge.exposeInMainWorld("whisprly", {
 
   onToneChanged: (callback) =>
     ipcRenderer.on("tone-changed", (_, tone) => callback(tone)),
+
+  onHistoryUpdated: (callback) =>
+    ipcRenderer.on("history-updated", () => callback()),
 });

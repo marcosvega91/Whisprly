@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Whisprly</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <img src="../../assets/icon.png" class="sidebar-icon" />
+        <span class="sidebar-title">Whisprly</span>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item active" data-tab="history">
+          <span class="nav-icon">&#x1F4DD;</span>
+          <span>History</span>
+        </li>
+        <li class="nav-item" data-tab="tone">
+          <span class="nav-icon">&#x1F3A4;</span>
+          <span>Voice Tone</span>
+        </li>
+        <li class="nav-item" data-tab="hotkey">
+          <span class="nav-icon">&#x2328;</span>
+          <span>Hotkey</span>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Content Area -->
+    <main class="content">
+      <!-- History Tab -->
+      <section id="tab-history" class="tab">
+        <div class="tab-header">
+          <h2>History</h2>
+          <button id="btn-clear-history" class="btn danger" style="display:none">
+            Clear All
+          </button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+        <div id="history-empty" class="empty-state hidden">
+          <p>No transcriptions yet.</p>
+          <p class="hint">Use the hotkey to record and your history will appear here.</p>
+        </div>
+      </section>
+
+      <!-- Tone Tab -->
+      <section id="tab-tone" class="tab hidden">
+        <div class="tab-header">
+          <h2>Voice Tone</h2>
+        </div>
+        <p class="section-hint">Choose the tone for text cleanup.</p>
+        <div id="tone-grid" class="tone-grid"></div>
+      </section>
+
+      <!-- Hotkey Tab -->
+      <section id="tab-hotkey" class="tab hidden">
+        <div class="tab-header">
+          <h2>Recording Hotkey</h2>
+        </div>
+        <p class="section-hint">Click the field, then press your desired key combination.</p>
+        <div id="hotkey-field" tabindex="0">
+          <span id="hotkey-display">Loading...</span>
+          <span id="hotkey-status"></span>
+        </div>
+        <div class="hotkey-actions">
+          <button id="btn-save-hotkey" class="btn primary" disabled>Save Hotkey</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

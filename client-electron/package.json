@@ -4,12 +4,15 @@
   "description": "Whisprly — Italian Voice Dictation (Electron Client)",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "postinstall": "electron-rebuild"
   },
   "dependencies": {
+    "better-sqlite3": "^11.0.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.0.0",
     "electron": "^33.0.0"
   }
 }
