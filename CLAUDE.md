@@ -15,14 +15,12 @@ cp .env.example .env  # Add OPENAI_API_KEY and ANTHROPIC_API_KEY
 # 2. Start the server (Docker)
 docker compose up -d
 
-# 3. Run the client (macOS)
-# First time:
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-brew install portaudio  # macOS prerequisite
+# 3. Run the Electron client (recommended)
+cd client-electron && npm install && npm start
 
-# Run client
+# Alternative: Python client (requires portaudio)
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt && brew install portaudio
 python client/app.py
 
 # Legacy mode (standalone, no Docker):
@@ -43,20 +41,25 @@ pytest tests/ -v
 ### Project Structure
 
 ```
-core/           Shared modules used by both server and client
-server/         FastAPI server (runs in Docker)
-client/         macOS client entry points
-tests/          Test suite (pytest)
+core/               Shared modules used by server and Python clients
+server/             FastAPI server (runs in Docker)
+client-electron/    Electron client — floating widget with animations (recommended)
+client/             Python client (legacy, pystray-based)
+assets/             Shared assets (app icon)
+tests/              Test suite (pytest)
 ```
 
 | Module | Responsibility |
 |---|---|
+| `client-electron/main.js` | Electron main process — window, hotkeys, IPC, auto-paste, context menu |
+| `client-electron/preload.js` | Context bridge between main and renderer processes |
+| `client-electron/renderer/` | Floating widget UI — HTML/CSS animations, audio recording, state machine |
 | `core/recorder.py` | `AudioRecorder` class — captures microphone via `sounddevice.InputStream`, outputs WAV bytes |
 | `core/transcriber.py` | `Transcriber` class — sends audio to OpenAI Whisper API, returns raw Italian text |
 | `core/cleaner.py` | `TextCleaner` class — sends text + tone instructions to Claude API, returns corrected text |
 | `core/notifier.py` | `notify()` function — macOS desktop notifications via osascript |
 | `server/app.py` | FastAPI server — REST API for transcription and text cleanup, runs in Docker |
-| `client/app.py` | macOS client — audio recording, system tray, hotkeys, sends audio to server, auto-pastes result |
+| `client/app.py` | Python client (pystray) — alternative to Electron client |
 | `client/legacy.py` | Legacy standalone mode — full pipeline without Docker (no auto-paste) |
 
 ### Server API Endpoints
@@ -79,10 +82,10 @@ tests/          Test suite (pytest)
 
 - **Client-server architecture**: Server in Docker for portability; client on host for hardware access (mic, clipboard, hotkeys).
 - **Auto-paste**: Client copies to clipboard then simulates Cmd+V via AppleScript to paste into the focused input field.
-- **Threading, not async**: Client uses daemon threads with locks for thread safety.
-- **Hotkey debouncing**: 500ms debounce window in `HotkeyManager` to prevent double triggers.
+- **Electron floating widget**: Frameless transparent window with CSS animations — breathing (idle), pulsing glow rings (recording), orbiting dots (processing).
+- **Audio via Web Audio API**: Electron renderer captures mic at 16kHz mono, encodes to WAV, sends to server.
+- **Hotkey debouncing**: 500ms debounce window to prevent double triggers.
 - **Stateless processing**: No database or persistent storage. Audio is processed in-memory and discarded.
-- **Dynamic tray icon**: Generated with Pillow — green (idle), red (recording), orange (processing).
 - **Italian AI prompts**: The Claude system prompt, tone presets, Whisper context, and extra_instructions are kept in Italian since they are functional prompts for processing Italian text.
 
 ## Configuration

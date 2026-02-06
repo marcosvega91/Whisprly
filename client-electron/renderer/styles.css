@@ -1,0 +1,290 @@
+/* ─── Reset & Base ──────────────────────────────────────────── */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+/* ─── Widget Container ──────────────────────────────────────── */
+
+#widget {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Icon ───────────────────────────────────────────────────── */
+
+#icon-container {
+  position: relative;
+  z-index: 10;
+  width: 100px;
+  height: 100px;
+  border-radius: 22px;
+  overflow: hidden;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+#icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* ─── Status Dot ─────────────────────────────────────────────── */
+
+#status-dot {
+  position: absolute;
+  bottom: 38px;
+  right: 38px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  z-index: 20;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ─── Glow Rings (Recording) ─────────────────────────────────── */
+
+.glow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  margin-top: -50px;
+  margin-left: -50px;
+  border-radius: 22px;
+  border: 2.5px solid rgba(244, 67, 54, 0);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+
+/* ─── Orbit Dots (Processing) ────────────────────────────────── */
+
+.orbit-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.orbit-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FF9800;
+  opacity: 0;
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
+}
+
+/* ─── Error Overlay ──────────────────────────────────────────── */
+
+#error-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(244, 67, 54, 0.85);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  z-index: 30;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+  -webkit-app-region: no-drag;
+}
+
+#error-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ─── Context Menu Area ──────────────────────────────────────── */
+
+#icon-container {
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STATE: IDLE
+   Subtle floating + gentle breathing
+   ════════════════════════════════════════════════════════════════ */
+
+body.idle #icon-container {
+  animation: idle-float 3s ease-in-out infinite;
+}
+
+body.idle #status-dot {
+  background-color: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+}
+
+@keyframes idle-float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-4px); }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STATE: RECORDING
+   Pulsing glow rings + icon pulse + red ambience
+   ════════════════════════════════════════════════════════════════ */
+
+body.recording #icon-container {
+  animation: recording-pulse 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(244, 67, 54, 0.5));
+}
+
+body.recording #status-dot {
+  background-color: #F44336;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
+  animation: dot-blink 0.8s ease-in-out infinite;
+}
+
+body.recording .glow-ring {
+  border-color: rgba(244, 67, 54, 0.5);
+  animation: ring-expand 2s ease-out infinite;
+}
+
+body.recording .ring-1 { animation-delay: 0s; }
+body.recording .ring-2 { animation-delay: 0.5s; }
+body.recording .ring-3 { animation-delay: 1.0s; }
+
+@keyframes recording-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+@keyframes ring-expand {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.9);
+    border-color: rgba(244, 67, 54, 0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+    border-color: rgba(244, 67, 54, 0);
+  }
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STATE: PROCESSING
+   Orbiting dots + shimmer effect
+   ════════════════════════════════════════════════════════════════ */
+
+body.processing #icon-container {
+  animation: processing-shimmer 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.4));
+}
+
+body.processing #status-dot {
+  background-color: #FF9800;
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.8);
+}
+
+body.processing .orbit-dot {
+  opacity: 1;
+  animation: orbit 1.8s linear infinite;
+}
+
+body.processing .dot-1 { animation-delay: 0s; }
+body.processing .dot-2 { animation-delay: -0.6s; }
+body.processing .dot-3 { animation-delay: -1.2s; }
+
+@keyframes processing-shimmer {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.4)) brightness(1);
+  }
+  50% {
+    transform: scale(0.97);
+    filter: drop-shadow(0 0 15px rgba(255, 152, 0, 0.6)) brightness(1.05);
+  }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateX(62px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(62px) rotate(-360deg);
+  }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STATE: SUCCESS (brief flash after paste)
+   ════════════════════════════════════════════════════════════════ */
+
+body.success #icon-container {
+  animation: success-bounce 0.5s ease-out;
+  filter: drop-shadow(0 0 15px rgba(76, 175, 80, 0.7));
+}
+
+body.success #status-dot {
+  background-color: #4CAF50;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.9);
+}
+
+@keyframes success-bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.15); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   STATE: ERROR
+   ════════════════════════════════════════════════════════════════ */
+
+body.error #icon-container {
+  animation: error-shake 0.4s ease-out;
+  filter: drop-shadow(0 0 10px rgba(244, 67, 54, 0.5)) grayscale(0.3);
+}
+
+body.error #status-dot {
+  background-color: #F44336;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}

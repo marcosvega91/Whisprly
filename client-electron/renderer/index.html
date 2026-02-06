@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whisprly</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="idle">
+  <div id="widget">
+    <!-- Glow rings (recording animation) -->
+    <div class="glow-ring ring-1"></div>
+    <div class="glow-ring ring-2"></div>
+    <div class="glow-ring ring-3"></div>
+
+    <!-- Orbit dots (processing animation) -->
+    <div class="orbit-container">
+      <div class="orbit-dot dot-1"></div>
+      <div class="orbit-dot dot-2"></div>
+      <div class="orbit-dot dot-3"></div>
+    </div>
+
+    <!-- Main icon -->
+    <div id="icon-container">
+      <img id="icon" src="../../assets/icon.png" draggable="false" />
+    </div>
+
+    <!-- Status indicator -->
+    <div id="status-dot"></div>
+  </div>
+
+  <!-- Error overlay -->
+  <div id="error-overlay" class="hidden">
+    <span>Server offline</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

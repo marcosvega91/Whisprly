@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whisprly — Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <div class="window">
+    <header>
+      <img src="../../assets/icon.png" class="header-icon" />
+      <h1>Whisprly Settings</h1>
+    </header>
+
+    <section>
+      <label for="hotkey-input">Recording Hotkey</label>
+      <p class="hint">Click the field, then press your desired key combination.</p>
+      <div id="hotkey-field" tabindex="0">
+        <span id="hotkey-display">Loading...</span>
+        <span id="hotkey-status"></span>
+      </div>
+    </section>
+
+    <footer>
+      <button id="btn-cancel" class="btn secondary">Cancel</button>
+      <button id="btn-save" class="btn primary" disabled>Save</button>
+    </footer>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
