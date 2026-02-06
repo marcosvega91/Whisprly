@@ -1,31 +1,30 @@
 """
 Whisprly - Modulo Notifiche Desktop
-Gestisce le notifiche di sistema cross-platform.
+Notifiche macOS native via osascript (nessuna dipendenza esterna).
 """
 
-import sys
+import subprocess
 import threading
 
 
 def notify(title: str, message: str, timeout: int = 5) -> None:
     """
-    Mostra una notifica desktop.
-    
-    Usa plyer come backend principale, con fallback per sistemi
-    dove plyer non funziona.
+    Mostra una notifica desktop macOS via osascript.
     """
     def _send():
         try:
-            from plyer import notification
-            notification.notify(
-                title=title,
-                message=message,
-                app_name="Whisprly",
-                timeout=timeout,
+            # Escape delle virgolette per AppleScript
+            safe_title = title.replace('"', '\\"')
+            safe_message = message.replace('"', '\\"')
+            subprocess.run(
+                [
+                    "osascript", "-e",
+                    f'display notification "{safe_message}" with title "{safe_title}"',
+                ],
+                capture_output=True,
+                timeout=5,
             )
         except Exception:
-            # Fallback: stampa in console
             print(f"🔔 [{title}] {message}")
 
-    # Esegui in thread separato per non bloccare
     threading.Thread(target=_send, daemon=True).start()

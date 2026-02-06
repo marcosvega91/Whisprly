@@ -1,6 +1,10 @@
 # Whisprly - Configurazione
 # Modifica questo file per personalizzare il comportamento dell'app
 
+# --- Server (per modalità Docker) ---
+server:
+  url: http://localhost:8899
+
 # --- Registrazione Audio ---
 audio:
   sample_rate: 16000      # Hz - Whisper funziona meglio a 16kHz
@@ -9,7 +13,7 @@ audio:
 
 # --- Hotkey ---
 hotkeys:
-  toggle_recording: <ctrl>+<shift>+space
+  toggle_recording: cmd_r
   quit: <ctrl>+<shift>+q
 
 # --- OpenAI Whisper ---
@@ -20,7 +24,7 @@ whisper:
 
 # --- Claude AI Cleanup ---
 claude:
-  model: claude-sonnet-4-20250514   # Modello Claude (sonnet = buon rapporto qualità/costo)
+  model: claude-haiku-4-5-20251001   # Haiku = molto più veloce, sufficiente per cleanup testo
   max_tokens: 4096
 
 # --- Tono di Voce ---
@@ -33,29 +37,29 @@ tone:
   # Definizione dei toni predefiniti
   presets:
     professionale: >
-      Riscrivi il testo con un tono professionale e formale.
-      Usa un linguaggio chiaro, preciso e appropriato per comunicazioni di lavoro.
-      Evita colloquialismi e abbreviazioni.
-    
+      Mantieni le parole e le espressioni originali del parlante.
+      Correggi solo punteggiatura, grammatica e organizzazione delle frasi.
+      Non sostituire parole colloquiali con sinonimi formali.
+      Adatta leggermente il registro solo se strettamente necessario per chiarezza.
+
     informale: >
-      Riscrivi il testo con un tono informale e amichevole.
-      Mantieni un linguaggio naturale e conversazionale, come se parlassi con un amico.
-      Puoi usare espressioni colloquiali italiane dove appropriato.
-    
+      Mantieni esattamente lo stile e le parole del parlante.
+      Correggi solo punteggiatura e grammatica, preservando il tono conversazionale.
+      Non modificare espressioni colloquiali o modi di dire.
+
     tecnico: >
-      Riscrivi il testo con un tono tecnico e preciso.
-      Usa terminologia specifica e accurata. Mantieni frasi strutturate e logiche.
-      Privilegia chiarezza e precisione rispetto all'eleganza stilistica.
-    
+      Mantieni le parole originali del parlante.
+      Correggi punteggiatura e grammatica. Organizza le frasi in modo logico.
+      Preserva i termini tecnici esattamente come detti.
+
     creativo: >
-      Riscrivi il testo con un tono creativo e coinvolgente.
-      Usa un linguaggio vivace e espressivo. Puoi usare metafore e figure retoriche
-      dove migliorano la comunicazione.
-    
+      Mantieni lo stile espressivo del parlante.
+      Correggi solo punteggiatura e grammatica.
+      Preserva metafore, figure retoriche e scelte stilistiche originali.
+
     diretto: >
-      Riscrivi il testo in modo diretto e conciso.
-      Vai dritto al punto senza giri di parole. Frasi brevi e incisive.
-      Elimina tutto il superfluo.
+      Mantieni le parole originali ma elimina ripetizioni e riempitivi inutili.
+      Correggi punteggiatura e grammatica. Frasi brevi e chiare.
 
   # Toni personalizzati - aggiungi i tuoi qui
   custom_tones:

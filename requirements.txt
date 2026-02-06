@@ -13,8 +13,8 @@ Pillow==11.1.0
 pynput==1.7.7
 pyperclip==1.9.0
 
-# Notifications
-plyer==2.1.0
+# HTTP client (per modalità Docker)
+requests==2.32.3
 
 # Configuration
 pyyaml==6.0.2
