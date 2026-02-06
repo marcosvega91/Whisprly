@@ -1,13 +1,13 @@
 """
-Whisprly - Modulo Cleanup Testo (Claude API)
-Usa Claude per correggere, punteggiare e adattare il tono del testo trascritto.
+Whisprly - Text Cleanup Module (Claude API)
+Uses Claude to correct, punctuate, and adjust the tone of transcribed text.
 """
 
 import anthropic
 
 
 class TextCleaner:
-    """Pulisce e migliora il testo trascritto usando Claude API."""
+    """Cleans and improves transcribed text using the Claude API."""
 
     SYSTEM_PROMPT = """Sei un correttore di testi dettati vocalmente in italiano.
 
@@ -45,20 +45,20 @@ Regole fondamentali:
         extra_instructions: str = "",
     ) -> str:
         """
-        Pulisci e migliora il testo trascritto.
-        
+        Clean and improve transcribed text.
+
         Args:
-            raw_text: Testo grezzo dalla trascrizione Whisper
-            tone_instruction: Istruzione sul tono di voce da usare
-            extra_instructions: Istruzioni aggiuntive per il cleanup
-            
+            raw_text: Raw text from Whisper transcription
+            tone_instruction: Tone of voice instruction to apply
+            extra_instructions: Additional cleanup instructions
+
         Returns:
-            str: Testo pulito, corretto e con punteggiatura
+            str: Cleaned, corrected, and punctuated text
         """
         if not raw_text.strip():
             return ""
 
-        # Costruisci il messaggio utente
+        # Build the user message
         user_parts = []
 
         if tone_instruction:
@@ -80,7 +80,7 @@ Regole fondamentali:
             ],
         )
 
-        # Estrai il testo dalla risposta
+        # Extract text from response
         result = ""
         for block in response.content:
             if block.type == "text":

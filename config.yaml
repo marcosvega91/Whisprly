@@ -1,15 +1,15 @@
-# Whisprly - Configurazione
-# Modifica questo file per personalizzare il comportamento dell'app
+# Whisprly - Configuration
+# Edit this file to customize the app behavior
 
-# --- Server (per modalità Docker) ---
+# --- Server (Docker mode) ---
 server:
   url: http://localhost:8899
 
-# --- Registrazione Audio ---
+# --- Audio Recording ---
 audio:
-  sample_rate: 16000      # Hz - Whisper funziona meglio a 16kHz
-  channels: 1             # Mono è sufficiente per speech
-  dtype: int16            # Formato audio
+  sample_rate: 16000      # Hz - Whisper works best at 16kHz
+  channels: 1             # Mono is sufficient for speech
+  dtype: int16            # Audio format
 
 # --- Hotkey ---
 hotkeys:
@@ -18,23 +18,23 @@ hotkeys:
 
 # --- OpenAI Whisper ---
 whisper:
-  model: whisper-1        # Modello Whisper da usare
-  language: it            # Forza italiano per migliore accuratezza
-  temperature: 0.0        # 0 = più deterministico
+  model: whisper-1        # Whisper model to use
+  language: it            # Force Italian for better accuracy
+  temperature: 0.0        # 0 = more deterministic
 
 # --- Claude AI Cleanup ---
 claude:
-  model: claude-haiku-4-5-20251001   # Haiku = molto più veloce, sufficiente per cleanup testo
+  model: claude-haiku-4-5-20251001   # Haiku = much faster, sufficient for text cleanup
   max_tokens: 4096
 
-# --- Tono di Voce ---
-# Puoi cambiare il tono al volo dal menu tray, oppure impostare il default qui.
-# Opzioni predefinite: professionale, informale, tecnico, creativo, diretto
-# Oppure scrivi un tono custom nella sezione 'custom_tones'
+# --- Voice Tone ---
+# You can change the tone on the fly from the tray menu, or set the default here.
+# Preset options: professionale, informale, tecnico, creativo, diretto
+# Or write a custom tone in the 'custom_tones' section
 tone:
   default: professionale
 
-  # Definizione dei toni predefiniti
+  # Preset tone definitions
   presets:
     professionale: >
       Mantieni le parole e le espressioni originali del parlante.
@@ -61,15 +61,15 @@ tone:
       Mantieni le parole originali ma elimina ripetizioni e riempitivi inutili.
       Correggi punteggiatura e grammatica. Frasi brevi e chiare.
 
-  # Toni personalizzati - aggiungi i tuoi qui
+  # Custom tones - add your own here
   custom_tones:
-    # esempio:
+    # example:
     # social_media: >
     #   Riscrivi per un post social: breve, accattivante, con emoji dove serve.
     #   Massimo 280 caratteri.
 
-# --- Istruzioni Extra ---
-# Istruzioni aggiuntive che vengono sempre passate a Claude durante il cleanup
+# --- Extra Instructions ---
+# Additional instructions always passed to Claude during cleanup
 extra_instructions: >
   Quando correggi il testo dettato:
   - Aggiungi sempre la punteggiatura corretta (punti, virgole, punto e virgola, ecc.)

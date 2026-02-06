@@ -1,9 +1,9 @@
 """
-Whisprly — Il tuo Wispr Flow italiano
-App desktop system-wide per dettatura vocale con AI cleanup.
+Whisprly — Italian Voice Dictation
+Desktop system-wide voice dictation app with AI cleanup.
 
-Uso:
-    python main.py
+Usage:
+    python client/legacy.py
 """
 
 import os
@@ -14,20 +14,20 @@ import yaml
 import pyperclip
 from pathlib import Path
 from dotenv import load_dotenv
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from pynput import keyboard
 import pystray
 
-from recorder import AudioRecorder
-from transcriber import Transcriber
-from cleaner import TextCleaner
-from notifier import notify
+from core.recorder import AudioRecorder
+from core.transcriber import Transcriber
+from core.cleaner import TextCleaner
+from core.notifier import notify
 
 
-# ─── Stato dell'app ───────────────────────────────────────────────
+# ─── App State ──────────────────────────────────────────────────
 
 class AppState:
-    """Stato globale dell'applicazione."""
+    """Global application state."""
     IDLE = "idle"
     RECORDING = "recording"
     PROCESSING = "processing"
@@ -47,38 +47,38 @@ class AppState:
             self.current_tone = tone
 
 
-# ─── Configurazione ──────────────────────────────────────────────
+# ─── Configuration ──────────────────────────────────────────────
 
 def load_config() -> dict:
-    """Carica la configurazione da config.yaml."""
-    config_path = Path(__file__).parent / "config.yaml"
+    """Load configuration from config.yaml."""
+    config_path = Path(__file__).resolve().parent.parent / "config.yaml"
     if not config_path.exists():
-        print("❌ config.yaml non trovato! Copia config.yaml.example e configuralo.")
+        print("config.yaml not found! Copy config.yaml.example and configure it.")
         sys.exit(1)
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def get_tone_instruction(config: dict, tone_name: str) -> str:
-    """Restituisce l'istruzione del tono specificato."""
+    """Return the instruction for the specified tone."""
     tone_cfg = config.get("tone", {})
-    
-    # Cerca nei preset
+
+    # Search in presets
     presets = tone_cfg.get("presets", {})
     if tone_name in presets:
         return presets[tone_name]
-    
-    # Cerca nei toni custom
+
+    # Search in custom tones
     custom = tone_cfg.get("custom_tones", {}) or {}
     if tone_name in custom:
         return custom[tone_name]
-    
-    # Fallback: usa il nome del tono come istruzione
+
+    # Fallback: use the tone name as instruction
     return f"Riscrivi il testo con un tono {tone_name}."
 
 
 def get_available_tones(config: dict) -> list[str]:
-    """Restituisce la lista di tutti i toni disponibili."""
+    """Return the list of all available tones."""
     tone_cfg = config.get("tone", {})
     tones = list(tone_cfg.get("presets", {}).keys())
     custom = tone_cfg.get("custom_tones", {}) or {}
@@ -86,38 +86,38 @@ def get_available_tones(config: dict) -> list[str]:
     return tones
 
 
-# ─── Icona Tray ──────────────────────────────────────────────────
+# ─── Tray Icon ──────────────────────────────────────────────────
 
 def create_icon_image(color: str = "#4CAF50") -> Image.Image:
-    """Crea un'icona per la system tray."""
+    """Create a system tray icon."""
     size = 64
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    
-    # Cerchio di sfondo
+
+    # Background circle
     draw.ellipse([4, 4, size - 4, size - 4], fill=color)
-    
-    # Simbolo microfono stilizzato (rettangolo + base)
+
+    # Stylized microphone symbol (body + base)
     mic_color = "white"
-    # Corpo microfono
+    # Microphone body
     draw.rounded_rectangle([24, 14, 40, 38], radius=6, fill=mic_color)
     # Base
     draw.arc([18, 26, 46, 48], start=0, end=180, fill=mic_color, width=3)
-    # Stelo
+    # Stem
     draw.line([32, 48, 32, 54], fill=mic_color, width=3)
     draw.line([24, 54, 40, 54], fill=mic_color, width=3)
-    
+
     return img
 
 
 ICON_COLORS = {
-    AppState.IDLE: "#4CAF50",       # Verde
-    AppState.RECORDING: "#F44336",   # Rosso
-    AppState.PROCESSING: "#FF9800",  # Arancione
+    AppState.IDLE: "#4CAF50",       # Green
+    AppState.RECORDING: "#F44336",   # Red
+    AppState.PROCESSING: "#FF9800",  # Orange
 }
 
 
-# ─── Pipeline principale ─────────────────────────────────────────
+# ─── Main Pipeline ──────────────────────────────────────────────
 
 def process_audio(
     audio_bytes: bytes,
@@ -128,24 +128,24 @@ def process_audio(
     tray_icon: pystray.Icon | None = None,
 ) -> None:
     """
-    Pipeline completa: audio → trascrizione → cleanup → clipboard.
-    Eseguita in un thread separato.
+    Full pipeline: audio -> transcription -> cleanup -> clipboard.
+    Runs in a separate thread.
     """
     try:
         state.set_status(AppState.PROCESSING)
         update_tray_icon(tray_icon, state)
-        notify("Whisprly", "⏳ Elaborazione in corso...")
+        notify("Whisprly", "Processing...")
 
-        # Step 1: Trascrizione con Whisper
+        # Step 1: Transcription with Whisper
         raw_text = transcriber.transcribe(audio_bytes)
-        
+
         if not raw_text.strip():
-            notify("Whisprly", "⚠️ Nessun testo rilevato nell'audio.")
+            notify("Whisprly", "No text detected in audio.")
             return
 
-        print(f"\n📝 Trascrizione grezza:\n{raw_text}\n")
+        print(f"\nRaw transcription:\n{raw_text}\n")
 
-        # Step 2: Cleanup con Claude
+        # Step 2: Cleanup with Claude
         tone_instruction = get_tone_instruction(config, state.current_tone)
         extra_instructions = config.get("extra_instructions", "")
 
@@ -155,27 +155,27 @@ def process_audio(
             extra_instructions=extra_instructions,
         )
 
-        print(f"✨ Testo pulito:\n{clean_text}\n")
+        print(f"Cleaned text:\n{clean_text}\n")
 
-        # Step 3: Copia negli appunti
+        # Step 3: Copy to clipboard
         pyperclip.copy(clean_text)
-        
-        # Mostra preview nella notifica (troncata)
+
+        # Show preview in notification (truncated)
         preview = clean_text[:100] + ("..." if len(clean_text) > 100 else "")
-        notify("Whisprly ✅", f"Copiato negli appunti!\n{preview}")
+        notify("Whisprly", f"Copied to clipboard!\n{preview}")
 
     except Exception as e:
-        print(f"❌ Errore durante l'elaborazione: {e}")
-        notify("Whisprly ❌", f"Errore: {str(e)[:100]}")
+        print(f"Error during processing: {e}")
+        notify("Whisprly", f"Error: {str(e)[:100]}")
     finally:
         state.set_status(AppState.IDLE)
         update_tray_icon(tray_icon, state)
 
 
-# ─── Gestione Tray Icon ─────────────────────────────────────────
+# ─── Tray Icon Management ──────────────────────────────────────
 
 def update_tray_icon(icon: pystray.Icon | None, state: AppState) -> None:
-    """Aggiorna il colore dell'icona in base allo stato."""
+    """Update the icon color based on the current state."""
     if icon is None:
         return
     try:
@@ -186,13 +186,13 @@ def update_tray_icon(icon: pystray.Icon | None, state: AppState) -> None:
 
 
 def create_tray_menu(state: AppState, config: dict) -> pystray.Menu:
-    """Crea il menu contestuale della tray icon."""
-    
+    """Create the tray icon context menu."""
+
     def make_tone_handler(tone_name):
         def handler(icon, item):
             state.set_tone(tone_name)
-            notify("Whisprly", f"🎨 Tono cambiato: {tone_name}")
-            # Aggiorna il menu
+            notify("Whisprly", f"Tone changed: {tone_name}")
+            # Update the menu
             icon.menu = create_tray_menu(state, config)
         return handler
 
@@ -201,7 +201,7 @@ def create_tray_menu(state: AppState, config: dict) -> pystray.Menu:
             return state.current_tone == tone_name
         return check
 
-    # Sottomenu toni
+    # Tone submenu
     tone_items = []
     for tone in get_available_tones(config):
         tone_items.append(
@@ -215,21 +215,21 @@ def create_tray_menu(state: AppState, config: dict) -> pystray.Menu:
 
     return pystray.Menu(
         pystray.MenuItem(
-            lambda text: f"Stato: {state.status.upper()}",
+            lambda text: f"Status: {state.status.upper()}",
             None,
             enabled=False,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("🎨 Tono di voce", pystray.Menu(*tone_items)),
+        pystray.MenuItem("Voice Tone", pystray.Menu(*tone_items)),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("❌ Esci", lambda icon, item: icon.stop()),
+        pystray.MenuItem("Quit", lambda icon, item: icon.stop()),
     )
 
 
-# ─── Hotkey Listener ─────────────────────────────────────────────
+# ─── Hotkey Listener ────────────────────────────────────────────
 
 def parse_hotkey(hotkey_str: str) -> set:
-    """Converte stringa hotkey in set di tasti per pynput."""
+    """Convert a hotkey string into a set of pynput keys."""
     key_map = {
         "<ctrl>": keyboard.Key.ctrl_l,
         "<shift>": keyboard.Key.shift_l,
@@ -238,7 +238,7 @@ def parse_hotkey(hotkey_str: str) -> set:
         "space": keyboard.Key.space,
         "<space>": keyboard.Key.space,
     }
-    
+
     parts = hotkey_str.lower().replace("+", " ").split()
     keys = set()
     for part in parts:
@@ -248,16 +248,16 @@ def parse_hotkey(hotkey_str: str) -> set:
         elif len(part) == 1:
             keys.add(keyboard.KeyCode.from_char(part))
         else:
-            # Prova come Key enum
+            # Try as Key enum
             try:
                 keys.add(getattr(keyboard.Key, part))
             except AttributeError:
-                print(f"⚠️ Tasto non riconosciuto: {part}")
+                print(f"Unrecognized key: {part}")
     return keys
 
 
 class HotkeyManager:
-    """Gestisce gli hotkey globali."""
+    """Manages global hotkeys."""
 
     def __init__(self):
         self._pressed_keys: set = set()
@@ -265,13 +265,13 @@ class HotkeyManager:
         self._listener: keyboard.Listener | None = None
 
     def register(self, hotkey_str: str, callback: callable) -> None:
-        """Registra un hotkey con la sua callback."""
+        """Register a hotkey with its callback."""
         keys = parse_hotkey(hotkey_str)
         self._callbacks[frozenset(keys)] = callback
-        print(f"⌨️  Hotkey registrato: {hotkey_str}")
+        print(f"Hotkey registered: {hotkey_str}")
 
     def start(self) -> None:
-        """Avvia il listener globale della tastiera."""
+        """Start the global keyboard listener."""
         self._listener = keyboard.Listener(
             on_press=self._on_press,
             on_release=self._on_release,
@@ -280,12 +280,12 @@ class HotkeyManager:
         self._listener.start()
 
     def stop(self) -> None:
-        """Ferma il listener."""
+        """Stop the listener."""
         if self._listener:
             self._listener.stop()
 
     def _normalize_key(self, key) -> keyboard.Key | keyboard.KeyCode:
-        """Normalizza i tasti (es. ctrl_r → ctrl_l)."""
+        """Normalize keys (e.g. ctrl_r -> ctrl_l)."""
         if hasattr(key, 'name'):
             name = key.name
             if name.endswith('_r'):
@@ -298,7 +298,7 @@ class HotkeyManager:
     def _on_press(self, key) -> None:
         normalized = self._normalize_key(key)
         self._pressed_keys.add(normalized)
-        
+
         frozen = frozenset(self._pressed_keys)
         for combo, callback in self._callbacks.items():
             if combo.issubset(frozen):
@@ -307,33 +307,33 @@ class HotkeyManager:
     def _on_release(self, key) -> None:
         normalized = self._normalize_key(key)
         self._pressed_keys.discard(normalized)
-        # Discard anche la versione originale
+        # Discard the original version too
         self._pressed_keys.discard(key)
 
 
-# ─── Main ────────────────────────────────────────────────────────
+# ─── Main ───────────────────────────────────────────────────────
 
 def main():
     print("=" * 50)
-    print("🎤 Whisprly — Il tuo Wispr Flow italiano")
+    print("Whisprly — Italian Voice Dictation")
     print("=" * 50)
 
-    # Carica env e config
-    load_dotenv(Path(__file__).parent / ".env")
+    # Load env and config
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     config = load_config()
 
-    # Verifica API keys
+    # Verify API keys
     openai_key = os.getenv("OPENAI_API_KEY", "")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
 
     if not openai_key or openai_key.startswith("sk-your"):
-        print("❌ OPENAI_API_KEY non configurata! Modifica il file .env")
+        print("OPENAI_API_KEY not configured! Edit the .env file")
         sys.exit(1)
     if not anthropic_key or anthropic_key.startswith("sk-ant-your"):
-        print("❌ ANTHROPIC_API_KEY non configurata! Modifica il file .env")
+        print("ANTHROPIC_API_KEY not configured! Edit the .env file")
         sys.exit(1)
 
-    # Inizializza componenti
+    # Initialize components
     audio_cfg = config.get("audio", {})
     recorder = AudioRecorder(
         sample_rate=audio_cfg.get("sample_rate", 16000),
@@ -356,47 +356,47 @@ def main():
         max_tokens=claude_cfg.get("max_tokens", 4096),
     )
 
-    # Stato app
+    # App state
     state = AppState()
     state.current_tone = config.get("tone", {}).get("default", "professionale")
     state.available_tones = get_available_tones(config)
 
-    # Variabile per l'icona tray (sarà impostata dopo)
+    # Tray icon reference (set after creation)
     tray_ref = {"icon": None}
 
-    # Debounce per evitare doppi trigger
+    # Debounce to prevent double triggers
     last_toggle_time = {"t": 0.0}
 
     def toggle_recording():
-        """Toggle registrazione on/off."""
+        """Toggle recording on/off."""
         now = time.time()
-        if now - last_toggle_time["t"] < 0.5:  # Debounce 500ms
+        if now - last_toggle_time["t"] < 0.5:  # 500ms debounce
             return
         last_toggle_time["t"] = now
 
         if state.status == AppState.PROCESSING:
-            return  # Non interrompere l'elaborazione
+            return  # Don't interrupt processing
 
         if not recorder.is_recording:
-            # Avvia registrazione
+            # Start recording
             recorder.start()
             state.set_status(AppState.RECORDING)
             update_tray_icon(tray_ref["icon"], state)
-            notify("Whisprly 🔴", "Registrazione avviata... Premi di nuovo per fermare.")
-            print("🔴 Registrazione avviata...")
+            notify("Whisprly", "Recording started... Press again to stop.")
+            print("Recording started...")
         else:
-            # Ferma registrazione
+            # Stop recording
             audio_data = recorder.stop()
             duration = recorder.get_duration()
-            print(f"⏹️  Registrazione fermata ({duration:.1f}s)")
+            print(f"Recording stopped ({duration:.1f}s)")
 
-            if len(audio_data) < 1000:  # Troppo corto
-                notify("Whisprly", "⚠️ Registrazione troppo breve, ignorata.")
+            if len(audio_data) < 1000:  # Too short
+                notify("Whisprly", "Recording too short, ignored.")
                 state.set_status(AppState.IDLE)
                 update_tray_icon(tray_ref["icon"], state)
                 return
 
-            # Processa in background
+            # Process in background
             threading.Thread(
                 target=process_audio,
                 args=(audio_data, transcriber, cleaner, config, state, tray_ref["icon"]),
@@ -404,12 +404,12 @@ def main():
             ).start()
 
     def quit_app():
-        """Chiudi l'applicazione."""
-        print("\n👋 Whisprly chiuso. A presto!")
+        """Quit the application."""
+        print("\nWhisprly closed. See you!")
         if tray_ref["icon"]:
             tray_ref["icon"].stop()
 
-    # Configura hotkeys
+    # Configure hotkeys
     hotkeys_cfg = config.get("hotkeys", {})
     hotkey_mgr = HotkeyManager()
     hotkey_mgr.register(
@@ -422,21 +422,21 @@ def main():
     )
     hotkey_mgr.start()
 
-    # Crea e avvia tray icon
+    # Create and start tray icon
     icon = pystray.Icon(
         name="Whisprly",
         icon=create_icon_image(),
-        title="Whisprly — Dettatura Vocale",
+        title="Whisprly — Voice Dictation",
         menu=create_tray_menu(state, config),
     )
     tray_ref["icon"] = icon
 
     hotkey_toggle = hotkeys_cfg.get("toggle_recording", "Ctrl+Shift+Space")
-    print(f"\n✅ Pronto! Premi {hotkey_toggle} per dettare.")
-    print(f"🎨 Tono attivo: {state.current_tone}")
-    print("💡 Usa l'icona nella tray per cambiare tono o uscire.\n")
+    print(f"\nReady! Press {hotkey_toggle} to dictate.")
+    print(f"Active tone: {state.current_tone}")
+    print("Use the tray icon to change tone or quit.\n")
 
-    # pystray.run() blocca il thread principale (necessario su macOS)
+    # pystray.run() blocks the main thread (required on macOS)
     icon.run()
 
     # Cleanup

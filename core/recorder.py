@@ -1,6 +1,6 @@
 """
-Whisprly - Modulo Registrazione Audio
-Gestisce la cattura audio dal microfono usando sounddevice.
+Whisprly - Audio Recording Module
+Handles microphone capture using sounddevice.
 """
 
 import io
@@ -11,7 +11,7 @@ import soundfile as sf
 
 
 class AudioRecorder:
-    """Registra audio dal microfono e lo esporta come buffer WAV."""
+    """Records audio from the microphone and exports it as a WAV buffer."""
 
     def __init__(self, sample_rate: int = 16000, channels: int = 1, dtype: str = "int16"):
         self.sample_rate = sample_rate
@@ -27,7 +27,7 @@ class AudioRecorder:
         return self._recording
 
     def start(self) -> None:
-        """Avvia la registrazione audio."""
+        """Start audio recording."""
         with self._lock:
             if self._recording:
                 return
@@ -44,10 +44,10 @@ class AudioRecorder:
 
     def stop(self) -> bytes:
         """
-        Ferma la registrazione e restituisce l'audio come bytes WAV.
-        
+        Stop recording and return audio as WAV bytes.
+
         Returns:
-            bytes: Audio in formato WAV pronto per Whisper API
+            bytes: Audio in WAV format ready for the Whisper API
         """
         with self._lock:
             if not self._recording:
@@ -61,24 +61,24 @@ class AudioRecorder:
         if not self._frames:
             return b""
 
-        # Combina tutti i frame audio
+        # Combine all audio frames
         audio_data = np.concatenate(self._frames, axis=0)
 
-        # Converti in WAV in memoria
+        # Convert to WAV in memory
         buffer = io.BytesIO()
         sf.write(buffer, audio_data, self.sample_rate, format="WAV", subtype="PCM_16")
         buffer.seek(0)
         return buffer.read()
 
     def _audio_callback(self, indata: np.ndarray, frames: int, time_info, status) -> None:
-        """Callback chiamato da sounddevice per ogni blocco audio."""
+        """Callback invoked by sounddevice for each audio block."""
         if status:
             print(f"[AudioRecorder] Warning: {status}")
         if self._recording:
             self._frames.append(indata.copy())
 
     def get_duration(self) -> float:
-        """Restituisce la durata corrente della registrazione in secondi."""
+        """Return the current recording duration in seconds."""
         if not self._frames:
             return 0.0
         total_samples = sum(f.shape[0] for f in self._frames)

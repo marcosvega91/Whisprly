@@ -2,18 +2,21 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Installa solo le dipendenze server (no audio, no desktop)
+# Install server-only dependencies (no audio, no desktop)
 COPY server-requirements.txt .
 RUN pip install --no-cache-dir -r server-requirements.txt
 
-# Copia i moduli necessari
-COPY server.py .
-COPY transcriber.py .
-COPY cleaner.py .
+# Copy shared core modules
+COPY core/ core/
+
+# Copy server module
+COPY server/ server/
+
+# Copy configuration
 COPY config.yaml .
 
-# Porta del server
+# Server port
 EXPOSE 8899
 
-# Avvia il server
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8899"]
+# Start the server
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8899"]

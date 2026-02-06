@@ -1,0 +1,8 @@
+[project]
+name = "whisprly"
+version = "1.0.0"
+description = "Voice dictation for Italian with AI-powered cleanup"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,6 +1,6 @@
 """
-Whisprly - Modulo Trascrizione (OpenAI Whisper)
-Invia l'audio a Whisper API e restituisce la trascrizione grezza.
+Whisprly - Transcription Module (OpenAI Whisper)
+Sends audio to the Whisper API and returns raw transcription.
 """
 
 import io
@@ -8,7 +8,7 @@ from openai import OpenAI
 
 
 class Transcriber:
-    """Trascrittore audio tramite OpenAI Whisper API."""
+    """Audio transcriber using the OpenAI Whisper API."""
 
     def __init__(
         self,
@@ -24,18 +24,18 @@ class Transcriber:
 
     def transcribe(self, audio_bytes: bytes) -> str:
         """
-        Trascrivi audio bytes in testo usando Whisper.
-        
+        Transcribe audio bytes to text using Whisper.
+
         Args:
-            audio_bytes: Audio in formato WAV
-            
+            audio_bytes: Audio in WAV format
+
         Returns:
-            str: Testo trascritto grezzo
+            str: Raw transcribed text
         """
         if not audio_bytes:
             return ""
 
-        # Whisper API accetta file-like objects
+        # Whisper API accepts file-like objects
         audio_file = io.BytesIO(audio_bytes)
         audio_file.name = "recording.wav"
 
@@ -44,7 +44,7 @@ class Transcriber:
             file=audio_file,
             language=self.language,
             temperature=self.temperature,
-            # Prompt opzionale per aiutare Whisper con contesto italiano
+            # Optional prompt to help Whisper with Italian context
             prompt=(
                 "Trascrizione di dettatura in italiano. "
                 "Il parlante potrebbe usare termini tecnici inglesi "

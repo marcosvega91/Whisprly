@@ -1,6 +1,6 @@
 """
-Whisprly Server — API REST per trascrizione e cleanup testo.
-Gira in Docker e gestisce le chiamate a Whisper e Claude.
+Whisprly Server — REST API for transcription and text cleanup.
+Runs in Docker and handles calls to Whisper and Claude.
 """
 
 import os
@@ -13,16 +13,16 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
 
-from transcriber import Transcriber
-from cleaner import TextCleaner
+from core.transcriber import Transcriber
+from core.cleaner import TextCleaner
 
 
-# ─── Configurazione ──────────────────────────────────────────────
+# ─── Configuration ──────────────────────────────────────────────
 
 def load_config() -> dict:
-    config_path = Path(__file__).parent / "config.yaml"
+    config_path = Path(__file__).resolve().parent.parent / "config.yaml"
     if not config_path.exists():
-        print("❌ config.yaml non trovato!")
+        print("config.yaml not found!")
         sys.exit(1)
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -47,7 +47,7 @@ def get_available_tones(config: dict) -> list[str]:
     return tones
 
 
-# ─── Stato globale ───────────────────────────────────────────────
+# ─── Global State ───────────────────────────────────────────────
 
 config: dict = {}
 transcriber: Transcriber
@@ -58,17 +58,17 @@ cleaner: TextCleaner
 async def lifespan(_app: FastAPI):
     global config, transcriber, cleaner
 
-    load_dotenv(Path(__file__).parent / ".env")
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     config = load_config()
 
     openai_key = os.getenv("OPENAI_API_KEY", "")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
 
     if not openai_key or openai_key.startswith("sk-your"):
-        print("❌ OPENAI_API_KEY non configurata!")
+        print("OPENAI_API_KEY not configured!")
         sys.exit(1)
     if not anthropic_key or anthropic_key.startswith("sk-ant-your"):
-        print("❌ ANTHROPIC_API_KEY non configurata!")
+        print("ANTHROPIC_API_KEY not configured!")
         sys.exit(1)
 
     whisper_cfg = config.get("whisper", {})
@@ -86,20 +86,20 @@ async def lifespan(_app: FastAPI):
         max_tokens=claude_cfg.get("max_tokens", 4096),
     )
 
-    print("✅ Whisprly Server avviato")
+    print("Whisprly Server started")
     yield
-    print("👋 Whisprly Server chiuso")
+    print("Whisprly Server stopped")
 
 
 app = FastAPI(
     title="Whisprly Server",
-    description="API per trascrizione vocale e cleanup testo",
+    description="API for voice transcription and text cleanup",
     version="1.0.0",
     lifespan=lifespan,
 )
 
 
-# ─── Modelli ─────────────────────────────────────────────────────
+# ─── Models ─────────────────────────────────────────────────────
 
 class CleanRequest(BaseModel):
     raw_text: str
@@ -120,7 +120,7 @@ class TonesResponse(BaseModel):
     default: str
 
 
-# ─── Endpoints ───────────────────────────────────────────────────
+# ─── Endpoints ──────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
@@ -138,11 +138,11 @@ async def get_tones():
 async def transcribe_audio(audio: UploadFile = File(...)):
     audio_bytes = await audio.read()
     if len(audio_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Audio troppo breve")
+        raise HTTPException(status_code=400, detail="Audio too short")
 
     raw_text = transcriber.transcribe(audio_bytes)
     if not raw_text.strip():
-        raise HTTPException(status_code=422, detail="Nessun testo rilevato")
+        raise HTTPException(status_code=422, detail="No text detected")
 
     return TranscribeResponse(raw_text=raw_text)
 
@@ -150,7 +150,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 @app.post("/clean", response_model=CleanResponse)
 async def clean_text(request: CleanRequest):
     if not request.raw_text.strip():
-        raise HTTPException(status_code=400, detail="Testo vuoto")
+        raise HTTPException(status_code=400, detail="Empty text")
 
     tone_instruction = get_tone_instruction(config, request.tone)
     extra_instructions = config.get("extra_instructions", "")
@@ -170,14 +170,14 @@ async def process_audio(
 ):
     audio_bytes = await audio.read()
     if len(audio_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Audio troppo breve")
+        raise HTTPException(status_code=400, detail="Audio too short")
 
-    # Step 1: Trascrizione
+    # Step 1: Transcription
     raw_text = transcriber.transcribe(audio_bytes)
     if not raw_text.strip():
-        raise HTTPException(status_code=422, detail="Nessun testo rilevato")
+        raise HTTPException(status_code=422, detail="No text detected")
 
-    print(f"📝 Trascrizione: {raw_text}")
+    print(f"Transcription: {raw_text}")
 
     # Step 2: Cleanup
     tone_instruction = get_tone_instruction(config, tone)
@@ -189,6 +189,6 @@ async def process_audio(
         extra_instructions=extra_instructions,
     )
 
-    print(f"✨ Pulito: {clean_text}")
+    print(f"Cleaned: {clean_text}")
 
     return ProcessResponse(raw_text=raw_text, clean_text=clean_text)

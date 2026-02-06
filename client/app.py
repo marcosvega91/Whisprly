@@ -1,7 +1,7 @@
 """
-Whisprly Client — Client leggero per macOS.
-Registra audio localmente, invia al server Docker per trascrizione e cleanup,
-e incolla automaticamente il risultato nel campo di input attivo.
+Whisprly Client — Lightweight macOS client.
+Records audio locally, sends to Docker server for transcription and cleanup,
+and auto-pastes the result into the focused input field.
 """
 
 import sys
@@ -17,11 +17,11 @@ from PIL import Image, ImageDraw
 from pynput import keyboard
 import pystray
 
-from recorder import AudioRecorder
-from notifier import notify
+from core.recorder import AudioRecorder
+from core.notifier import notify
 
 
-# ─── Stato dell'app ───────────────────────────────────────────────
+# ─── App State ──────────────────────────────────────────────────
 
 class AppState:
     IDLE = "idle"
@@ -43,18 +43,18 @@ class AppState:
             self.current_tone = tone
 
 
-# ─── Configurazione ──────────────────────────────────────────────
+# ─── Configuration ──────────────────────────────────────────────
 
 def load_config() -> dict:
-    config_path = Path(__file__).parent / "config.yaml"
+    config_path = Path(__file__).resolve().parent.parent / "config.yaml"
     if not config_path.exists():
-        print("❌ config.yaml non trovato!")
+        print("config.yaml not found!")
         sys.exit(1)
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-# ─── Icona Tray ──────────────────────────────────────────────────
+# ─── Tray Icon ──────────────────────────────────────────────────
 
 def create_icon_image(color: str = "#4CAF50") -> Image.Image:
     size = 64
@@ -86,12 +86,12 @@ def update_tray_icon(icon: pystray.Icon | None, state: AppState) -> None:
         pass
 
 
-# ─── Auto-Paste ──────────────────────────────────────────────────
+# ─── Auto-Paste ─────────────────────────────────────────────────
 
 def auto_paste(text: str) -> None:
-    """Copia il testo negli appunti e simula Cmd+V per incollare nel campo attivo."""
+    """Copy text to clipboard and simulate Cmd+V to paste into the focused field."""
     pyperclip.copy(text)
-    time.sleep(0.1)  # Piccolo delay per assicurarsi che la clipboard sia pronta
+    time.sleep(0.1)  # Small delay to ensure clipboard is ready
     try:
         subprocess.run(
             ["osascript", "-e",
@@ -100,10 +100,10 @@ def auto_paste(text: str) -> None:
             capture_output=True,
         )
     except subprocess.CalledProcessError as e:
-        print(f"⚠️ Auto-paste fallito: {e}. Il testo è comunque negli appunti.")
+        print(f"Auto-paste failed: {e}. Text is still in the clipboard.")
 
 
-# ─── Pipeline (via Server) ───────────────────────────────────────
+# ─── Pipeline (via Server) ──────────────────────────────────────
 
 def process_audio(
     audio_bytes: bytes,
@@ -111,13 +111,13 @@ def process_audio(
     state: AppState,
     tray_icon: pystray.Icon | None = None,
 ) -> None:
-    """Invia audio al server e incolla il risultato."""
+    """Send audio to the server and paste the result."""
     try:
         state.set_status(AppState.PROCESSING)
         update_tray_icon(tray_icon, state)
-        notify("Whisprly", "⏳ Elaborazione in corso...")
+        notify("Whisprly", "Processing...")
 
-        # Invia al server
+        # Send to server
         response = requests.post(
             f"{server_url}/process",
             files={"audio": ("recording.wav", audio_bytes, "audio/wav")},
@@ -126,36 +126,36 @@ def process_audio(
         )
 
         if response.status_code != 200:
-            error = response.json().get("detail", "Errore sconosciuto")
-            notify("Whisprly ❌", f"Errore server: {error}")
+            error = response.json().get("detail", "Unknown error")
+            notify("Whisprly", f"Server error: {error}")
             return
 
         result = response.json()
         raw_text = result["raw_text"]
         clean_text = result["clean_text"]
 
-        print(f"\n📝 Trascrizione grezza:\n{raw_text}\n")
-        print(f"✨ Testo pulito:\n{clean_text}\n")
+        print(f"\nRaw transcription:\n{raw_text}\n")
+        print(f"Cleaned text:\n{clean_text}\n")
 
-        # Auto-paste nel campo attivo
+        # Auto-paste into the focused field
         auto_paste(clean_text)
 
         preview = clean_text[:100] + ("..." if len(clean_text) > 100 else "")
-        notify("Whisprly ✅", f"Incollato!\n{preview}")
+        notify("Whisprly", f"Pasted!\n{preview}")
 
     except requests.ConnectionError:
-        notify("Whisprly ❌", "Server non raggiungibile. Docker è in esecuzione?")
+        notify("Whisprly", "Server unreachable. Is Docker running?")
     except requests.Timeout:
-        notify("Whisprly ❌", "Timeout: il server non ha risposto in tempo.")
+        notify("Whisprly", "Timeout: the server did not respond in time.")
     except Exception as e:
-        print(f"❌ Errore: {e}")
-        notify("Whisprly ❌", f"Errore: {str(e)[:100]}")
+        print(f"Error: {e}")
+        notify("Whisprly", f"Error: {str(e)[:100]}")
     finally:
         state.set_status(AppState.IDLE)
         update_tray_icon(tray_icon, state)
 
 
-# ─── Hotkey ──────────────────────────────────────────────────────
+# ─── Hotkey ─────────────────────────────────────────────────────
 
 def parse_hotkey(hotkey_str: str) -> set:
     key_map = {
@@ -179,31 +179,31 @@ def parse_hotkey(hotkey_str: str) -> set:
             try:
                 keys.add(getattr(keyboard.Key, part))
             except AttributeError:
-                print(f"⚠️ Tasto non riconosciuto: {part}")
+                print(f"Unrecognized key: {part}")
     return keys
 
 
 class HotkeyManager:
-    """Gestisce hotkey globali. Supporta sia combo (es. ctrl+shift+space)
-    che singoli modifier come tap-to-toggle (es. cmd_r)."""
+    """Manages global hotkeys. Supports both combos (e.g. ctrl+shift+space)
+    and single modifiers as tap-to-toggle (e.g. cmd_r)."""
 
     def __init__(self):
         self._pressed_keys: set = set()
         self._callbacks: dict[frozenset, callable] = {}
-        self._tap_callbacks: dict = {}  # key -> callback per singoli modifier
+        self._tap_callbacks: dict = {}  # key -> callback for single modifier
         self._listener: keyboard.Listener | None = None
-        self._other_key_pressed = False  # True se altri tasti premuti durante il modifier
+        self._other_key_pressed = False  # True if other keys pressed during modifier
 
     def register(self, hotkey_str: str, callback: callable) -> None:
         keys = parse_hotkey(hotkey_str)
         if len(keys) == 1:
-            # Singolo tasto: usa tap-to-toggle (attiva al rilascio, solo se premuto da solo)
+            # Single key: use tap-to-toggle (activates on release, only if pressed alone)
             key = next(iter(keys))
             self._tap_callbacks[key] = callback
-            print(f"⌨️  Hotkey registrato (tap): {hotkey_str}")
+            print(f"Hotkey registered (tap): {hotkey_str}")
         else:
             self._callbacks[frozenset(keys)] = callback
-            print(f"⌨️  Hotkey registrato: {hotkey_str}")
+            print(f"Hotkey registered: {hotkey_str}")
 
     def start(self) -> None:
         self._listener = keyboard.Listener(
@@ -220,12 +220,12 @@ class HotkeyManager:
     def _on_press(self, key) -> None:
         self._pressed_keys.add(key)
 
-        # Per tap-to-toggle: se il modifier è già premuto e arriva un altro tasto,
-        # significa che è una combo (es. Cmd+C), non un tap singolo
+        # For tap-to-toggle: if the modifier is already pressed and another key arrives,
+        # it means it's a combo (e.g. Cmd+C), not a single tap
         if key not in self._tap_callbacks:
             self._other_key_pressed = True
 
-        # Controlla combo multi-tasto (normalizzando _r → _l)
+        # Check multi-key combos (normalizing _r -> _l)
         normalized = set()
         for k in self._pressed_keys:
             if hasattr(k, 'name') and k.name.endswith('_r'):
@@ -242,24 +242,24 @@ class HotkeyManager:
                 callback()
 
     def _on_release(self, key) -> None:
-        # Tap-to-toggle: attiva solo se il modifier è stato premuto e rilasciato da solo
+        # Tap-to-toggle: activate only if the modifier was pressed and released alone
         if key in self._tap_callbacks and not self._other_key_pressed:
             self._tap_callbacks[key]()
 
         self._pressed_keys.discard(key)
 
-        # Reset flag quando tutti i tasti sono rilasciati
+        # Reset flag when all keys are released
         if not self._pressed_keys:
             self._other_key_pressed = False
 
 
-# ─── Tray Menu ───────────────────────────────────────────────────
+# ─── Tray Menu ──────────────────────────────────────────────────
 
 def create_tray_menu(state: AppState, tones: list[str]) -> pystray.Menu:
     def make_tone_handler(tone_name):
         def handler(icon, item):
             state.set_tone(tone_name)
-            notify("Whisprly", f"🎨 Tono cambiato: {tone_name}")
+            notify("Whisprly", f"Tone changed: {tone_name}")
             icon.menu = create_tray_menu(state, tones)
         return handler
 
@@ -281,44 +281,44 @@ def create_tray_menu(state: AppState, tones: list[str]) -> pystray.Menu:
 
     return pystray.Menu(
         pystray.MenuItem(
-            lambda text: f"Stato: {state.status.upper()}",
+            lambda text: f"Status: {state.status.upper()}",
             None,
             enabled=False,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("🎨 Tono di voce", pystray.Menu(*tone_items)),
+        pystray.MenuItem("Voice Tone", pystray.Menu(*tone_items)),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("❌ Esci", lambda icon, item: icon.stop()),
+        pystray.MenuItem("Quit", lambda icon, item: icon.stop()),
     )
 
 
-# ─── Main ────────────────────────────────────────────────────────
+# ─── Main ───────────────────────────────────────────────────────
 
 def main():
     print("=" * 50)
-    print("🎤 Whisprly Client — Dettatura Vocale")
+    print("Whisprly Client — Voice Dictation")
     print("=" * 50)
 
-    load_dotenv(Path(__file__).parent / ".env")
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     config = load_config()
 
     # Server URL
     server_cfg = config.get("server", {})
     server_url = server_cfg.get("url", "http://localhost:8899")
 
-    # Verifica connessione al server
-    print(f"🔗 Connessione al server: {server_url}")
+    # Check server connection
+    print(f"Connecting to server: {server_url}")
     try:
         r = requests.get(f"{server_url}/health", timeout=5)
         if r.status_code == 200:
-            print("✅ Server raggiungibile!")
+            print("Server reachable!")
         else:
-            print(f"⚠️ Server risponde con status {r.status_code}")
+            print(f"Server responded with status {r.status_code}")
     except requests.ConnectionError:
-        print("⚠️ Server non raggiungibile. Avvia Docker con: docker compose up -d")
-        print("   Il client continuerà, ma la dettatura non funzionerà finché il server non è attivo.\n")
+        print("Server unreachable. Start Docker with: docker compose up -d")
+        print("   The client will continue, but dictation won't work until the server is running.\n")
 
-    # Carica toni dal server o fallback da config
+    # Load tones from server or fallback from config
     tones = []
     default_tone = config.get("tone", {}).get("default", "professionale")
     try:
@@ -341,7 +341,7 @@ def main():
         dtype=audio_cfg.get("dtype", "int16"),
     )
 
-    # Stato app
+    # App state
     state = AppState()
     state.current_tone = default_tone
     state.available_tones = tones
@@ -362,15 +362,15 @@ def main():
             recorder.start()
             state.set_status(AppState.RECORDING)
             update_tray_icon(tray_ref["icon"], state)
-            notify("Whisprly 🔴", "Registrazione avviata... Premi di nuovo per fermare.")
-            print("🔴 Registrazione avviata...")
+            notify("Whisprly", "Recording started... Press again to stop.")
+            print("Recording started...")
         else:
             audio_data = recorder.stop()
             duration = recorder.get_duration()
-            print(f"⏹️  Registrazione fermata ({duration:.1f}s)")
+            print(f"Recording stopped ({duration:.1f}s)")
 
             if len(audio_data) < 1000:
-                notify("Whisprly", "⚠️ Registrazione troppo breve, ignorata.")
+                notify("Whisprly", "Recording too short, ignored.")
                 state.set_status(AppState.IDLE)
                 update_tray_icon(tray_ref["icon"], state)
                 return
@@ -382,7 +382,7 @@ def main():
             ).start()
 
     def quit_app():
-        print("\n👋 Whisprly chiuso. A presto!")
+        print("\nWhisprly closed. See you!")
         if tray_ref["icon"]:
             tray_ref["icon"].stop()
 
@@ -403,16 +403,16 @@ def main():
     icon = pystray.Icon(
         name="Whisprly",
         icon=create_icon_image(),
-        title="Whisprly — Dettatura Vocale",
+        title="Whisprly — Voice Dictation",
         menu=create_tray_menu(state, tones),
     )
     tray_ref["icon"] = icon
 
     hotkey_toggle = hotkeys_cfg.get("toggle_recording", "Ctrl+Shift+Space")
-    print(f"\n✅ Pronto! Premi {hotkey_toggle} per dettare.")
-    print(f"🎨 Tono attivo: {state.current_tone}")
-    print(f"🔗 Server: {server_url}")
-    print("💡 Usa l'icona nella tray per cambiare tono o uscire.\n")
+    print(f"\nReady! Press {hotkey_toggle} to dictate.")
+    print(f"Active tone: {state.current_tone}")
+    print(f"Server: {server_url}")
+    print("Use the tray icon to change tone or quit.\n")
 
     icon.run()
 
