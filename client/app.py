@@ -5,13 +5,15 @@ and auto-pastes the result into the focused input field.
 """
 
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import subprocess
 import threading
 import time
 import yaml
 import pyperclip
 import requests
-from pathlib import Path
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw
 from pynput import keyboard
@@ -56,16 +58,25 @@ def load_config() -> dict:
 
 # ─── Tray Icon ──────────────────────────────────────────────────
 
+ICON_PATH = Path(__file__).resolve().parent.parent / "assets" / "icon.png"
+_base_icon: Image.Image | None = None
+
+
+def _load_base_icon() -> Image.Image:
+    global _base_icon
+    if _base_icon is None:
+        _base_icon = Image.open(ICON_PATH).convert("RGBA").resize((64, 64), Image.LANCZOS)
+    return _base_icon.copy()
+
+
 def create_icon_image(color: str = "#4CAF50") -> Image.Image:
-    size = 64
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    img = _load_base_icon()
     draw = ImageDraw.Draw(img)
-    draw.ellipse([4, 4, size - 4, size - 4], fill=color)
-    mic_color = "white"
-    draw.rounded_rectangle([24, 14, 40, 38], radius=6, fill=mic_color)
-    draw.arc([18, 26, 46, 48], start=0, end=180, fill=mic_color, width=3)
-    draw.line([32, 48, 32, 54], fill=mic_color, width=3)
-    draw.line([24, 54, 40, 54], fill=mic_color, width=3)
+    # Status dot (bottom-right corner)
+    dot_r = 10
+    x, y = img.width - dot_r - 2, img.height - dot_r - 2
+    draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r],
+                 fill=color, outline="white", width=2)
     return img
 
 
