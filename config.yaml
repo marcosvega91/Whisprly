@@ -1,0 +1,80 @@
+# Whisprly - Configurazione
+# Modifica questo file per personalizzare il comportamento dell'app
+
+# --- Registrazione Audio ---
+audio:
+  sample_rate: 16000      # Hz - Whisper funziona meglio a 16kHz
+  channels: 1             # Mono è sufficiente per speech
+  dtype: int16            # Formato audio
+
+# --- Hotkey ---
+hotkeys:
+  toggle_recording: <ctrl>+<shift>+space
+  quit: <ctrl>+<shift>+q
+
+# --- OpenAI Whisper ---
+whisper:
+  model: whisper-1        # Modello Whisper da usare
+  language: it            # Forza italiano per migliore accuratezza
+  temperature: 0.0        # 0 = più deterministico
+
+# --- Claude AI Cleanup ---
+claude:
+  model: claude-sonnet-4-20250514   # Modello Claude (sonnet = buon rapporto qualità/costo)
+  max_tokens: 4096
+
+# --- Tono di Voce ---
+# Puoi cambiare il tono al volo dal menu tray, oppure impostare il default qui.
+# Opzioni predefinite: professionale, informale, tecnico, creativo, diretto
+# Oppure scrivi un tono custom nella sezione 'custom_tones'
+tone:
+  default: professionale
+
+  # Definizione dei toni predefiniti
+  presets:
+    professionale: >
+      Riscrivi il testo con un tono professionale e formale.
+      Usa un linguaggio chiaro, preciso e appropriato per comunicazioni di lavoro.
+      Evita colloquialismi e abbreviazioni.
+    
+    informale: >
+      Riscrivi il testo con un tono informale e amichevole.
+      Mantieni un linguaggio naturale e conversazionale, come se parlassi con un amico.
+      Puoi usare espressioni colloquiali italiane dove appropriato.
+    
+    tecnico: >
+      Riscrivi il testo con un tono tecnico e preciso.
+      Usa terminologia specifica e accurata. Mantieni frasi strutturate e logiche.
+      Privilegia chiarezza e precisione rispetto all'eleganza stilistica.
+    
+    creativo: >
+      Riscrivi il testo con un tono creativo e coinvolgente.
+      Usa un linguaggio vivace e espressivo. Puoi usare metafore e figure retoriche
+      dove migliorano la comunicazione.
+    
+    diretto: >
+      Riscrivi il testo in modo diretto e conciso.
+      Vai dritto al punto senza giri di parole. Frasi brevi e incisive.
+      Elimina tutto il superfluo.
+
+  # Toni personalizzati - aggiungi i tuoi qui
+  custom_tones:
+    # esempio:
+    # social_media: >
+    #   Riscrivi per un post social: breve, accattivante, con emoji dove serve.
+    #   Massimo 280 caratteri.
+
+# --- Istruzioni Extra ---
+# Istruzioni aggiuntive che vengono sempre passate a Claude durante il cleanup
+extra_instructions: >
+  Quando correggi il testo dettato:
+  - Aggiungi sempre la punteggiatura corretta (punti, virgole, punto e virgola, ecc.)
+  - Correggi errori di trascrizione e parole mal interpretate dal riconoscimento vocale
+  - Mantieni il significato originale del parlato, non aggiungere contenuto
+  - Se il parlante dice esplicitamente "virgola", "punto", "a capo", "apri parentesi",
+    ecc., convertili nel simbolo di punteggiatura corrispondente
+  - Gestisci correttamente maiuscole dopo i punti e per nomi propri
+  - Non aggiungere saluti, firme o altri elementi non presenti nel dettato
+  - Mantieni eventuali termini tecnici inglesi come sono (es. "deploy", "commit", "sprint")
+  - Se una frase non ha senso, prova a interpretare cosa il parlante intendeva dire
+    basandoti sul contesto
