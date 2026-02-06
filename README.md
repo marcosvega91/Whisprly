@@ -10,11 +10,13 @@ Whisprly records your speech, transcribes it with **OpenAI Whisper**, cleans it 
 
 ## Features
 
+- **Floating widget** — animated icon with recording/processing states
 - **System-wide hotkey** — press to record, press again to stop
 - **OpenAI Whisper** transcription optimized for Italian
 - **Claude AI cleanup** — punctuation, grammar correction, tone adjustment
 - **Auto-paste** into the focused input field (macOS)
-- **System tray** icon with status indicator (green/red/orange) and tone selector
+- **Dashboard** — history of past transcriptions, tone selector, hotkey settings
+- **Transcription history** — last 100 entries saved locally with copy/delete
 - **Multiple voice tones** — professional, informal, technical, creative, direct
 - **Custom tones** — define your own in `config.yaml`
 - **Client-server architecture** — server in Docker, client on macOS
@@ -23,42 +25,47 @@ Whisprly records your speech, transcribes it with **OpenAI Whisper**, cleans it 
 
 ```
 Client (macOS)  ──HTTP──>  Server (Docker)  ──API──>  Whisper + Claude
- - Audio recording          - FastAPI REST API         - Transcription
- - Hotkeys                  - Transcription            - Text cleanup
- - System tray              - Text cleanup
+ - Electron widget          - FastAPI REST API         - Transcription
+ - Audio recording           - Transcription            - Text cleanup
+ - Hotkeys                   - Text cleanup
+ - Dashboard + History
  - Auto-paste
 ```
 
 ### Project Structure
 
 ```
-core/           Shared modules (recorder, transcriber, cleaner, notifier)
-server/         FastAPI server (runs in Docker)
-client/         macOS client (audio, hotkeys, tray, auto-paste)
-tests/          Test suite (pytest)
-config.yaml     App configuration (shared by server and client)
+client-electron/  Electron client — floating widget + dashboard (recommended)
+core/             Shared modules (recorder, transcriber, cleaner, notifier)
+server/           FastAPI server (runs in Docker)
+client/           Python client (legacy, pystray-based)
+tests/            Test suite (pytest)
+config.yaml       App configuration (shared by server and client)
 ```
 
 ### Components
 
 | Module | Responsibility |
 |---|---|
+| `client-electron/main.js` | Electron main process — window, hotkeys, IPC, auto-paste, dashboard |
+| `client-electron/preload.js` | Context bridge between main and renderer processes |
+| `client-electron/renderer/` | Floating widget UI, dashboard (history, tones, hotkey) |
+| `client-electron/db.js` | SQLite persistence for transcription history |
 | `core/recorder.py` | Audio capture from microphone via `sounddevice`, outputs WAV bytes |
 | `core/transcriber.py` | Sends audio to OpenAI Whisper API, returns raw Italian text |
 | `core/cleaner.py` | Sends text to Claude API for correction, punctuation, and tone |
 | `core/notifier.py` | macOS desktop notifications via `osascript` |
 | `server/app.py` | FastAPI REST server — transcription and cleanup endpoints |
-| `client/app.py` | macOS client — recording, hotkeys, tray, auto-paste via server |
+| `client/app.py` | Python client (alternative to Electron) |
 | `client/legacy.py` | Standalone mode — full pipeline without Docker (no auto-paste) |
 
 ## Prerequisites
 
 - **Docker** and **Docker Compose**
-- **Python 3.10+** (for the client)
-- **macOS** (client uses osascript and sounddevice)
+- **Node.js 18+** (for the Electron client)
+- **macOS** (client uses osascript for auto-paste)
 - **OpenAI API key** (for Whisper transcription)
 - **Anthropic API key** (for Claude text cleanup)
-- **PortAudio** — `brew install portaudio`
 
 ## Quick Start
 
@@ -70,43 +77,52 @@ cp .env.example .env
 # 2. Start the server (Docker)
 docker compose up -d
 
-# 3. Set up the client (first time only)
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# 3. Run the Electron client (recommended)
+cd client-electron && npm install && npm start
+```
 
-# 4. Run the client
+### Alternative: Python Client
+
+```bash
+python -m venv venv && source venv/activate
+pip install -r requirements.txt && brew install portaudio
 python client/app.py
 ```
 
 ## Usage
 
-1. **Press the hotkey** (default: `Cmd Right`) to start recording
+1. **Press the hotkey** (default: `Cmd+Shift+Space`) to start recording
 2. **Press again** to stop recording
 3. Audio is sent to the Docker server
 4. The server transcribes with Whisper and cleans up with Claude
 5. The result is **auto-pasted** into the focused input field
 
-### System Tray
+### Floating Widget
 
-The client shows a tray icon that changes color based on state:
-- **Green** — idle, ready to record
-- **Red** — recording in progress
-- **Orange** — processing (transcription + cleanup)
+The widget is a small icon in the bottom-right corner that changes based on state:
+- **Breathing animation** — idle, ready to record
+- **Pulsing red glow** — recording in progress
+- **Orbiting dots** — processing (transcription + cleanup)
+- **Bounce** — success, text pasted
 
-From the tray menu you can:
-- See current status
-- Change the voice tone on the fly
-- Quit the app
+**Click** the widget to open the dashboard. **Right-click** for a quick menu.
+
+### Dashboard
+
+Click the widget to open the dashboard with three sections:
+
+- **History** — list of past transcriptions (last 100), each with copy and delete buttons
+- **Voice Tone** — select the active tone for text cleanup
+- **Hotkey** — configure the recording shortcut
 
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
-| `Cmd Right` (tap) | Toggle recording |
+| `Cmd+Shift+Space` | Toggle recording |
 | `Ctrl+Shift+Q` | Quit |
 
-Shortcuts are configurable in `config.yaml`.
+Shortcuts are configurable from the dashboard or in `config.yaml`.
 
 ## Configuration
 
@@ -194,10 +210,10 @@ pytest tests/ -v
 
 | File | Purpose |
 |---|---|
-| `requirements.txt` | Client dependencies (audio, desktop, HTTP) |
+| `requirements.txt` | Python client dependencies (audio, desktop, HTTP) |
 | `server-requirements.txt` | Server dependencies (FastAPI, APIs) |
 | `dev-requirements.txt` | Test dependencies (pytest, httpx, FastAPI) |
 
 ## License
 
-MIT
+[MIT](LICENSE)

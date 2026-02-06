@@ -51,9 +51,10 @@ tests/              Test suite (pytest)
 
 | Module | Responsibility |
 |---|---|
-| `client-electron/main.js` | Electron main process — window, hotkeys, IPC, auto-paste, context menu |
+| `client-electron/main.js` | Electron main process — window, hotkeys, IPC, auto-paste, dashboard |
 | `client-electron/preload.js` | Context bridge between main and renderer processes |
-| `client-electron/renderer/` | Floating widget UI — HTML/CSS animations, audio recording, state machine |
+| `client-electron/renderer/` | Floating widget UI + dashboard (history, tones, hotkey settings) |
+| `client-electron/db.js` | SQLite persistence layer for transcription history (better-sqlite3) |
 | `core/recorder.py` | `AudioRecorder` class — captures microphone via `sounddevice.InputStream`, outputs WAV bytes |
 | `core/transcriber.py` | `Transcriber` class — sends audio to OpenAI Whisper API, returns raw Italian text |
 | `core/cleaner.py` | `TextCleaner` class — sends text + tone instructions to Claude API, returns corrected text |
@@ -85,7 +86,9 @@ tests/              Test suite (pytest)
 - **Electron floating widget**: Frameless transparent window with CSS animations — breathing (idle), pulsing glow rings (recording), orbiting dots (processing).
 - **Audio via Web Audio API**: Electron renderer captures mic at 16kHz mono, encodes to WAV, sends to server.
 - **Hotkey debouncing**: 500ms debounce window to prevent double triggers.
-- **Stateless processing**: No database or persistent storage. Audio is processed in-memory and discarded.
+- **Dashboard**: Click the widget to open a dashboard with history, tone selector, and hotkey settings. Replaces the old settings window.
+- **Transcription history**: Last 100 entries stored in SQLite (`better-sqlite3`) in Electron's userData directory. Each entry saves clean_text, raw_text, tone, and timestamp.
+- **Tone state in main process**: The active tone is managed as a single source of truth in the Electron main process, synced to widget and dashboard via IPC.
 - **Italian AI prompts**: The Claude system prompt, tone presets, Whisper context, and extra_instructions are kept in Italian since they are functional prompts for processing Italian text.
 
 ## Configuration
