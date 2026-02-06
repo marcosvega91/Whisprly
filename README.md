@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" alt="Whisprly" width="128">
+</p>
+
 # Whisprly
 
 Voice dictation for Italian with AI-powered transcription and text cleanup.
