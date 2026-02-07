@@ -61,12 +61,12 @@ function createWindow() {
     screen.getPrimaryDisplay().workAreaSize;
 
   const savedPos = loadPosition();
-  const startX = savedPos ? savedPos.x : screenW - 220;
-  const startY = savedPos ? savedPos.y : screenH - 220;
+  const startX = savedPos ? savedPos.x : screenW - 200;
+  const startY = savedPos ? savedPos.y : screenH - 110;
 
   mainWindow = new BrowserWindow({
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 90,
     x: startX,
     y: startY,
     frame: false,

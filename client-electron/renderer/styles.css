@@ -7,8 +7,8 @@
 }
 
 html, body {
-  width: 200px;
-  height: 200px;
+  width: 180px;
+  height: 90px;
   overflow: hidden;
   background: transparent;
   user-select: none;
@@ -19,44 +19,39 @@ html, body {
 
 #widget {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 180px;
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* ─── Icon ───────────────────────────────────────────────────── */
+/* ─── Text Pill ─────────────────────────────────────────────── */
 
 #icon-container {
   position: relative;
   z-index: 10;
-  width: 100px;
-  height: 100px;
-  border-radius: 22px;
-  overflow: hidden;
-  transition: transform 0.3s ease, filter 0.3s ease;
+  padding: 9px 20px;
+  border-radius: 20px;
+  background: rgba(25, 25, 40, 0.88);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transition: transform 0.3s ease, background 0.3s ease,
+              border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
 }
 
-#icon {
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-}
-
-/* ─── Status Dot ─────────────────────────────────────────────── */
-
-#status-dot {
-  position: absolute;
-  bottom: 38px;
-  right: 38px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  z-index: 20;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+.letter {
+  font-family: "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.85);
+  display: inline-block;
+  transition: color 0.3s ease;
 }
 
 /* ─── Glow Rings (Recording) ─────────────────────────────────── */
@@ -65,52 +60,30 @@ html, body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 100px;
-  height: 100px;
-  margin-top: -50px;
-  margin-left: -50px;
-  border-radius: 22px;
-  border: 2.5px solid rgba(244, 67, 54, 0);
+  width: 110px;
+  height: 40px;
+  margin-top: -20px;
+  margin-left: -55px;
+  border-radius: 20px;
+  border: 1.5px solid transparent;
   pointer-events: none;
   opacity: 0;
   z-index: 5;
-}
-
-/* ─── Orbit Dots (Processing) ────────────────────────────────── */
-
-.orbit-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  z-index: 15;
-  pointer-events: none;
-}
-
-.orbit-dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #FF9800;
-  opacity: 0;
-  box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
 }
 
 /* ─── Error Overlay ──────────────────────────────────────────── */
 
 #error-overlay {
   position: absolute;
-  bottom: 12px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(244, 67, 54, 0.85);
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
   z-index: 30;
   white-space: nowrap;
@@ -123,7 +96,7 @@ html, body {
   pointer-events: none;
 }
 
-/* ─── Context Menu Area ──────────────────────────────────────── */
+/* ─── Drag / Click Area ──────────────────────────────────────── */
 
 #icon-container {
   -webkit-app-region: no-drag;
@@ -133,107 +106,108 @@ html, body {
 
 /* ════════════════════════════════════════════════════════════════
    STATE: IDLE
-   Subtle floating + gentle breathing
+   Subtle floating + soft green underglow
    ════════════════════════════════════════════════════════════════ */
 
 body.idle #icon-container {
-  animation: idle-float 3s ease-in-out infinite;
+  animation: idle-float 3.5s ease-in-out infinite;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35),
+              0 0 10px rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.2);
 }
 
-body.idle #status-dot {
-  background-color: #4CAF50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+body.idle .letter {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 @keyframes idle-float {
   0%, 100% { transform: translateY(0px); }
-  50%      { transform: translateY(-4px); }
+  50%      { transform: translateY(-3px); }
 }
 
 
 /* ════════════════════════════════════════════════════════════════
    STATE: RECORDING
-   Pulsing glow rings + icon pulse + red ambience
+   Letters wave + red glow + expanding pill rings
    ════════════════════════════════════════════════════════════════ */
 
 body.recording #icon-container {
-  animation: recording-pulse 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(244, 67, 54, 0.5));
+  background: rgba(40, 20, 25, 0.9);
+  border-color: rgba(244, 67, 54, 0.4);
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.3),
+              0 0 6px rgba(244, 67, 54, 0.15);
 }
 
-body.recording #status-dot {
-  background-color: #F44336;
-  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
-  animation: dot-blink 0.8s ease-in-out infinite;
+body.recording .letter {
+  color: rgba(244, 67, 54, 0.95);
+  animation: letter-wave 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.09s);
 }
 
 body.recording .glow-ring {
-  border-color: rgba(244, 67, 54, 0.5);
-  animation: ring-expand 2s ease-out infinite;
+  border-color: rgba(244, 67, 54, 0.45);
+  animation: ring-expand 2.2s ease-out infinite;
 }
 
 body.recording .ring-1 { animation-delay: 0s; }
-body.recording .ring-2 { animation-delay: 0.5s; }
-body.recording .ring-3 { animation-delay: 1.0s; }
+body.recording .ring-2 { animation-delay: 0.6s; }
+body.recording .ring-3 { animation-delay: 1.2s; }
 
-@keyframes recording-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.05); }
+@keyframes letter-wave {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
 }
 
 @keyframes ring-expand {
   0% {
-    opacity: 0.6;
-    transform: scale(0.9);
-    border-color: rgba(244, 67, 54, 0.6);
+    opacity: 0.5;
+    transform: scale(1);
+    border-color: rgba(244, 67, 54, 0.45);
   }
   100% {
     opacity: 0;
-    transform: scale(1.9);
+    transform: scale(1.7);
     border-color: rgba(244, 67, 54, 0);
   }
-}
-
-@keyframes dot-blink {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.3; }
 }
 
 
 /* ════════════════════════════════════════════════════════════════
    STATE: RECORDING + CONTEXT
-   Purple glow rings instead of red
+   Purple wave instead of red
    ════════════════════════════════════════════════════════════════ */
 
 body.recording.context #icon-container {
-  animation: recording-pulse 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(124, 77, 255, 0.5));
+  background: rgba(30, 20, 45, 0.9);
+  border-color: rgba(124, 77, 255, 0.4);
+  box-shadow: 0 0 20px rgba(124, 77, 255, 0.3),
+              0 0 6px rgba(124, 77, 255, 0.15);
 }
 
-body.recording.context #status-dot {
-  background-color: #7C4DFF;
-  box-shadow: 0 0 8px rgba(124, 77, 255, 0.8);
-  animation: dot-blink 0.8s ease-in-out infinite;
+body.recording.context .letter {
+  color: rgba(124, 77, 255, 0.95);
+  animation: letter-wave 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.09s);
 }
 
 body.recording.context .glow-ring {
-  border-color: rgba(124, 77, 255, 0.5);
-  animation: context-ring-expand 2s ease-out infinite;
+  border-color: rgba(124, 77, 255, 0.45);
+  animation: context-ring-expand 2.2s ease-out infinite;
 }
 
 body.recording.context .ring-1 { animation-delay: 0s; }
-body.recording.context .ring-2 { animation-delay: 0.5s; }
-body.recording.context .ring-3 { animation-delay: 1.0s; }
+body.recording.context .ring-2 { animation-delay: 0.6s; }
+body.recording.context .ring-3 { animation-delay: 1.2s; }
 
 @keyframes context-ring-expand {
   0% {
-    opacity: 0.6;
-    transform: scale(0.9);
-    border-color: rgba(124, 77, 255, 0.6);
+    opacity: 0.5;
+    transform: scale(1);
+    border-color: rgba(124, 77, 255, 0.45);
   }
   100% {
     opacity: 0;
-    transform: scale(1.9);
+    transform: scale(1.7);
     border-color: rgba(124, 77, 255, 0);
   }
 }
@@ -241,46 +215,39 @@ body.recording.context .ring-3 { animation-delay: 1.0s; }
 
 /* ════════════════════════════════════════════════════════════════
    STATE: PROCESSING
-   Orbiting dots + shimmer effect
+   Shimmer gradient sweeps across text + orange glow
    ════════════════════════════════════════════════════════════════ */
 
 body.processing #icon-container {
-  animation: processing-shimmer 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.4));
+  background: rgba(35, 28, 18, 0.9);
+  border-color: rgba(255, 152, 0, 0.35);
+  box-shadow: 0 0 18px rgba(255, 152, 0, 0.25),
+              0 0 5px rgba(255, 152, 0, 0.1);
+  animation: container-pulse 2s ease-in-out infinite;
 }
 
-body.processing #status-dot {
-  background-color: #FF9800;
-  box-shadow: 0 0 8px rgba(255, 152, 0, 0.8);
+body.processing .letter {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 180, 50, 1) 40%,
+    rgba(255, 255, 255, 0.6) 80%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.06s);
 }
 
-body.processing .orbit-dot {
-  opacity: 1;
-  animation: orbit 1.8s linear infinite;
+@keyframes container-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(0.98); }
 }
 
-body.processing .dot-1 { animation-delay: 0s; }
-body.processing .dot-2 { animation-delay: -0.6s; }
-body.processing .dot-3 { animation-delay: -1.2s; }
-
-@keyframes processing-shimmer {
-  0%, 100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.4)) brightness(1);
-  }
-  50% {
-    transform: scale(0.97);
-    filter: drop-shadow(0 0 15px rgba(255, 152, 0, 0.6)) brightness(1.05);
-  }
-}
-
-@keyframes orbit {
-  0% {
-    transform: rotate(0deg) translateX(62px) rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg) translateX(62px) rotate(-360deg);
-  }
+@keyframes text-shimmer {
+  0%   { background-position: 250% center; }
+  100% { background-position: -50% center; }
 }
 
 
@@ -290,18 +257,19 @@ body.processing .dot-3 { animation-delay: -1.2s; }
 
 body.success #icon-container {
   animation: success-bounce 0.5s ease-out;
-  filter: drop-shadow(0 0 15px rgba(76, 175, 80, 0.7));
+  border-color: rgba(76, 175, 80, 0.5);
+  box-shadow: 0 0 22px rgba(76, 175, 80, 0.45),
+              0 0 8px rgba(76, 175, 80, 0.25);
 }
 
-body.success #status-dot {
-  background-color: #4CAF50;
-  box-shadow: 0 0 12px rgba(76, 175, 80, 0.9);
+body.success .letter {
+  color: rgba(76, 175, 80, 0.95);
 }
 
 @keyframes success-bounce {
   0%   { transform: scale(1); }
-  40%  { transform: scale(1.15); }
-  70%  { transform: scale(0.95); }
+  40%  { transform: scale(1.1); }
+  70%  { transform: scale(0.96); }
   100% { transform: scale(1); }
 }
 
@@ -312,18 +280,18 @@ body.success #status-dot {
 
 body.error #icon-container {
   animation: error-shake 0.4s ease-out;
-  filter: drop-shadow(0 0 10px rgba(244, 67, 54, 0.5)) grayscale(0.3);
+  border-color: rgba(244, 67, 54, 0.5);
+  box-shadow: 0 0 16px rgba(244, 67, 54, 0.35);
 }
 
-body.error #status-dot {
-  background-color: #F44336;
-  box-shadow: 0 0 8px rgba(244, 67, 54, 0.8);
+body.error .letter {
+  color: rgba(244, 67, 54, 0.8);
 }
 
 @keyframes error-shake {
   0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(-5px); }
-  40%      { transform: translateX(5px); }
-  60%      { transform: translateX(-3px); }
-  80%      { transform: translateX(3px); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
 }
