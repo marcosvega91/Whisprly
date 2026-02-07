@@ -73,6 +73,15 @@ class TestCleanEndpoint:
         r = client.post("/clean", json={"raw_text": "   ", "tone": "professionale"})
         assert r.status_code == 400
 
+    def test_with_context(self, client):
+        r = client.post("/clean", json={
+            "raw_text": "rispondi che va bene",
+            "tone": "professionale",
+            "context": "Ci vediamo domani alle 10?",
+        })
+        assert r.status_code == 200
+        assert r.json()["clean_text"] == "Testo pulito"
+
 
 class TestProcessEndpoint:
     def test_full_pipeline(self, client, sample_audio_bytes):
@@ -80,6 +89,17 @@ class TestProcessEndpoint:
             "/process",
             files={"audio": ("test.wav", sample_audio_bytes)},
             data={"tone": "professionale"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["raw_text"] == "Testo trascritto"
+        assert data["clean_text"] == "Testo pulito"
+
+    def test_with_context(self, client, sample_audio_bytes):
+        r = client.post(
+            "/process",
+            files={"audio": ("test.wav", sample_audio_bytes)},
+            data={"tone": "professionale", "context": "Some email thread"},
         )
         assert r.status_code == 200
         data = r.json()

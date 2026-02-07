@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld("whisprly", {
   closeDashboard: () => ipcRenderer.invoke("close-dashboard"),
   getCurrentHotkey: () => ipcRenderer.invoke("get-current-hotkey"),
   saveHotkey: (accelerator) => ipcRenderer.invoke("save-hotkey", accelerator),
+  getCurrentContextHotkey: () => ipcRenderer.invoke("get-current-context-hotkey"),
+  saveContextHotkey: (accelerator) => ipcRenderer.invoke("save-context-hotkey", accelerator),
 
   // Tone
   getCurrentTone: () => ipcRenderer.invoke("get-current-tone"),
@@ -41,6 +43,9 @@ contextBridge.exposeInMainWorld("whisprly", {
   // Events from main process
   onToggleRecording: (callback) =>
     ipcRenderer.on("toggle-recording", () => callback()),
+
+  onToggleRecordingWithContext: (callback) =>
+    ipcRenderer.on("toggle-recording-with-context", (_, context) => callback(context)),
 
   onToneChanged: (callback) =>
     ipcRenderer.on("tone-changed", (_, tone) => callback(tone)),

@@ -26,7 +26,17 @@ Regole fondamentali:
    "aperte virgolette", "chiuse virgolette", "trattino"),
    sostituiscili con il simbolo corrispondente
 7. Mantieni i termini tecnici inglesi come sono
-8. Non aggiungere informazioni non presenti nell'originale"""
+8. Non aggiungere informazioni non presenti nell'originale
+9. Quando è presente un blocco <contesto>, il parlante sta rispondendo o reagendo a quel testo.
+   In questo caso le regole 2-5 NON si applicano. Invece:
+   - Componi una risposta ben strutturata e appropriata al contesto
+   - Preserva l'intento e il significato di ciò che il parlante vuole comunicare
+   - RISCRIVI il testo in modo chiaro e coerente: elimina riempitivi (es. "diciamo", "tipo",
+     "cioè", "ecco", "praticamente", "comunque"), ripetizioni, e frasi sconnesse
+   - Formatta la risposta in modo adeguato al contesto (es. se si risponde a una mail,
+     struttura il testo come una risposta email; se è un messaggio breve, mantienilo conciso)
+   - Applica il tono richiesto
+   - Non inventare informazioni non presenti nel dettato del parlante"""
 
     def __init__(
         self,
@@ -43,6 +53,7 @@ Regole fondamentali:
         raw_text: str,
         tone_instruction: str = "",
         extra_instructions: str = "",
+        context: str = "",
     ) -> str:
         """
         Clean and improve transcribed text.
@@ -51,6 +62,7 @@ Regole fondamentali:
             raw_text: Raw text from Whisper transcription
             tone_instruction: Tone of voice instruction to apply
             extra_instructions: Additional cleanup instructions
+            context: Optional context text the user is responding to
 
         Returns:
             str: Cleaned, corrected, and punctuated text
@@ -60,6 +72,9 @@ Regole fondamentali:
 
         # Build the user message
         user_parts = []
+
+        if context:
+            user_parts.append(f"<contesto>\n{context}\n</contesto>")
 
         if tone_instruction:
             user_parts.append(f"<tono>\n{tone_instruction}\n</tono>")

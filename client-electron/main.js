@@ -31,6 +31,7 @@ let config = {};
 let mainWindow = null;
 let dashboardWindow = null;
 let currentToggleAccelerator = null;
+let currentContextAccelerator = null;
 let currentTone = "professionale";
 
 // ─── Window ─────────────────────────────────────────────────────
@@ -237,6 +238,10 @@ function setupIPC() {
     return currentToggleAccelerator || "Command+Shift+Space";
   });
 
+  ipcMain.handle("get-current-context-hotkey", () => {
+    return currentContextAccelerator || "Command+Shift+R";
+  });
+
   ipcMain.handle("save-hotkey", (_, accelerator) => {
     try {
       if (currentToggleAccelerator) {
@@ -268,6 +273,41 @@ function setupIPC() {
       return { success: true };
     } catch (e) {
       console.error("Failed to save hotkey:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle("save-context-hotkey", (_, accelerator) => {
+    try {
+      if (currentContextAccelerator) {
+        globalShortcut.unregister(currentContextAccelerator);
+      }
+
+      const ok = globalShortcut.register(accelerator, () => {
+        captureContextAndRecord();
+      });
+
+      if (!ok) {
+        if (currentContextAccelerator) {
+          globalShortcut.register(currentContextAccelerator, () => {
+            captureContextAndRecord();
+          });
+        }
+        return { success: false, error: "Shortcut already in use by another app" };
+      }
+
+      const raw = fs.readFileSync(CONFIG_PATH, "utf8");
+      const updated = raw.replace(
+        /^(\s*context_recording:\s*).+$/m,
+        `$1${accelerator}`
+      );
+      fs.writeFileSync(CONFIG_PATH, updated, "utf8");
+
+      currentContextAccelerator = accelerator;
+      console.log(`Context hotkey updated: ${accelerator}`);
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to save context hotkey:", e);
       return { success: false, error: e.message };
     }
   });
@@ -334,6 +374,29 @@ function setupIPC() {
   });
 }
 
+// ─── Context Capture ─────────────────────────────────────────────
+
+function captureContextAndRecord() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  // Copy selected text via Cmd+C
+  try {
+    execSync(
+      'osascript -e \'tell application "System Events" to keystroke "c" using command down\''
+    );
+  } catch (e) {
+    console.error("Failed to copy context:", e.message);
+  }
+
+  // Wait for clipboard to populate, then read and send to renderer
+  setTimeout(() => {
+    const contextText = clipboard.readText() || "";
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("toggle-recording-with-context", contextText);
+    }
+  }, 150);
+}
+
 // ─── Hotkeys ────────────────────────────────────────────────────
 
 function registerHotkeys() {
@@ -341,6 +404,9 @@ function registerHotkeys() {
 
   const toggleKey = mapHotkeyToElectron(
     hotkeyCfg.toggle_recording || "<ctrl>+<shift>+space"
+  );
+  const contextKey = mapHotkeyToElectron(
+    hotkeyCfg.context_recording || "<cmd>+<shift>+r"
   );
   const quitKey = mapHotkeyToElectron(
     hotkeyCfg.quit || "<ctrl>+<shift>+q"
@@ -355,6 +421,18 @@ function registerHotkeys() {
       ok
         ? `Hotkey registered: ${toggleKey}`
         : `Failed to register hotkey: ${toggleKey}`
+    );
+  }
+
+  if (contextKey) {
+    const ok = globalShortcut.register(contextKey, () => {
+      captureContextAndRecord();
+    });
+    if (ok) currentContextAccelerator = contextKey;
+    console.log(
+      ok
+        ? `Context hotkey registered: ${contextKey}`
+        : `Failed to register context hotkey: ${contextKey}`
     );
   }
 

@@ -201,6 +201,45 @@ body.recording .ring-3 { animation-delay: 1.0s; }
 
 
 /* ════════════════════════════════════════════════════════════════
+   STATE: RECORDING + CONTEXT
+   Purple glow rings instead of red
+   ════════════════════════════════════════════════════════════════ */
+
+body.recording.context #icon-container {
+  animation: recording-pulse 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(124, 77, 255, 0.5));
+}
+
+body.recording.context #status-dot {
+  background-color: #7C4DFF;
+  box-shadow: 0 0 8px rgba(124, 77, 255, 0.8);
+  animation: dot-blink 0.8s ease-in-out infinite;
+}
+
+body.recording.context .glow-ring {
+  border-color: rgba(124, 77, 255, 0.5);
+  animation: context-ring-expand 2s ease-out infinite;
+}
+
+body.recording.context .ring-1 { animation-delay: 0s; }
+body.recording.context .ring-2 { animation-delay: 0.5s; }
+body.recording.context .ring-3 { animation-delay: 1.0s; }
+
+@keyframes context-ring-expand {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.9);
+    border-color: rgba(124, 77, 255, 0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+    border-color: rgba(124, 77, 255, 0);
+  }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
    STATE: PROCESSING
    Orbiting dots + shimmer effect
    ════════════════════════════════════════════════════════════════ */

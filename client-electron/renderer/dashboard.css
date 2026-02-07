@@ -250,7 +250,16 @@ body {
 
 /* ─── Hotkey Field ────────────────────────────────────────────── */
 
-#hotkey-field {
+.hotkey-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a0a0c0;
+  margin-bottom: 8px;
+}
+
+#hotkey-field,
+#context-hotkey-field {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -263,17 +272,21 @@ body {
   outline: none;
 }
 
-#hotkey-field:hover {
+#hotkey-field:hover,
+#context-hotkey-field:hover {
   border-color: #3a3a6a;
 }
 
 #hotkey-field:focus,
-#hotkey-field.listening {
+#hotkey-field.listening,
+#context-hotkey-field:focus,
+#context-hotkey-field.listening {
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
-#hotkey-display {
+#hotkey-display,
+#context-hotkey-display {
   font-size: 16px;
   font-weight: 500;
   font-family: "SF Mono", "Menlo", "Monaco", monospace;
@@ -283,7 +296,8 @@ body {
   flex-wrap: wrap;
 }
 
-#hotkey-display .key {
+#hotkey-display .key,
+#context-hotkey-display .key {
   background: #2a2a4a;
   padding: 4px 10px;
   border-radius: 6px;
@@ -292,20 +306,24 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-#hotkey-status {
+#hotkey-status,
+#context-hotkey-status {
   font-size: 11px;
   font-weight: 500;
 }
 
-#hotkey-status.listening {
+#hotkey-status.listening,
+#context-hotkey-status.listening {
   color: #6366f1;
 }
 
-#hotkey-status.changed {
+#hotkey-status.changed,
+#context-hotkey-status.changed {
   color: #10b981;
 }
 
-#hotkey-status.error {
+#hotkey-status.error,
+#context-hotkey-status.error {
   color: #ef4444;
 }
 

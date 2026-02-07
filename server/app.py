@@ -104,6 +104,7 @@ app = FastAPI(
 class CleanRequest(BaseModel):
     raw_text: str
     tone: str = "professionale"
+    context: str = ""
 
 class CleanResponse(BaseModel):
     clean_text: str
@@ -159,6 +160,7 @@ async def clean_text(request: CleanRequest):
         raw_text=request.raw_text,
         tone_instruction=tone_instruction,
         extra_instructions=extra_instructions,
+        context=request.context,
     )
     return CleanResponse(clean_text=clean)
 
@@ -167,6 +169,7 @@ async def clean_text(request: CleanRequest):
 async def process_audio(
     audio: UploadFile = File(...),
     tone: str = Form("professionale"),
+    context: str = Form(""),
 ):
     audio_bytes = await audio.read()
     if len(audio_bytes) < 1000:
@@ -187,6 +190,7 @@ async def process_audio(
         raw_text=raw_text,
         tone_instruction=tone_instruction,
         extra_instructions=extra_instructions,
+        context=context,
     )
 
     print(f"Cleaned: {clean_text}")

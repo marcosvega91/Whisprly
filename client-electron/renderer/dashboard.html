@@ -58,15 +58,27 @@
       <!-- Hotkey Tab -->
       <section id="tab-hotkey" class="tab hidden">
         <div class="tab-header">
-          <h2>Recording Hotkey</h2>
+          <h2>Hotkeys</h2>
         </div>
-        <p class="section-hint">Click the field, then press your desired key combination.</p>
+        <p class="section-hint">Click a field, then press your desired key combination.</p>
+
+        <label class="hotkey-label">Recording</label>
         <div id="hotkey-field" tabindex="0">
           <span id="hotkey-display">Loading...</span>
           <span id="hotkey-status"></span>
         </div>
         <div class="hotkey-actions">
-          <button id="btn-save-hotkey" class="btn primary" disabled>Save Hotkey</button>
+          <button id="btn-save-hotkey" class="btn primary" disabled>Save</button>
+        </div>
+
+        <label class="hotkey-label" style="margin-top: 20px;">Context Recording</label>
+        <p class="section-hint">Select text in any app, press this hotkey to record a contextual response.</p>
+        <div id="context-hotkey-field" tabindex="0">
+          <span id="context-hotkey-display">Loading...</span>
+          <span id="context-hotkey-status"></span>
+        </div>
+        <div class="hotkey-actions">
+          <button id="btn-save-context-hotkey" class="btn primary" disabled>Save</button>
         </div>
       </section>
     </main>

@@ -148,16 +148,7 @@ async function loadTones() {
   });
 }
 
-// ─── Hotkey Capture (ported from settings.js) ───────────────────
-
-let originalHotkey = "";
-let capturedAccelerator = "";
-let isListening = false;
-
-const hotkeyField = document.getElementById("hotkey-field");
-const hotkeyDisplay = document.getElementById("hotkey-display");
-const hotkeyStatus = document.getElementById("hotkey-status");
-const btnSaveHotkey = document.getElementById("btn-save-hotkey");
+// ─── Hotkey Capture ─────────────────────────────────────────────
 
 const KEY_DISPLAY = {
   Meta: "\u2318",
@@ -198,13 +189,13 @@ function keyToElectron(key) {
   return specials[key] || key;
 }
 
-function renderKeys(accelerator) {
+function renderKeysInto(displayEl, accelerator) {
   if (!accelerator) {
-    hotkeyDisplay.textContent = "Not set";
+    displayEl.textContent = "Not set";
     return;
   }
   const parts = accelerator.split("+");
-  hotkeyDisplay.innerHTML = parts
+  displayEl.innerHTML = parts
     .map((p) => {
       const symbols = { Command: "\u2318", Ctrl: "\u2303", Alt: "\u2325", Shift: "\u21E7" };
       const label = symbols[p] || p;
@@ -213,144 +204,159 @@ function renderKeys(accelerator) {
     .join("");
 }
 
+// Shared state for whichever field is currently active
+let activeCapture = null;
 const pressedKeys = new Set();
 
-function startListening() {
-  isListening = true;
-  pressedKeys.clear();
-  hotkeyField.classList.add("listening");
-  hotkeyStatus.textContent = "Press keys...";
-  hotkeyStatus.className = "listening";
-  hotkeyDisplay.innerHTML = '<span style="color: #6366f1">Waiting for input...</span>';
-}
+function createHotkeyCapture({ fieldEl, displayEl, statusEl, saveBtn, saveFn }) {
+  let original = "";
+  let captured = "";
 
-function stopListening() {
-  isListening = false;
-  hotkeyField.classList.remove("listening");
-}
-
-hotkeyField.addEventListener("click", () => {
-  if (!isListening) startListening();
-});
-
-hotkeyField.addEventListener("focus", () => {
-  if (!isListening) startListening();
-});
-
-hotkeyField.addEventListener("blur", () => {
-  if (isListening && pressedKeys.size === 0) {
-    stopListening();
-    renderKeys(capturedAccelerator || originalHotkey);
-    hotkeyStatus.textContent = "";
-    hotkeyStatus.className = "";
+  function startListening() {
+    // Stop any other active capture
+    if (activeCapture && activeCapture !== capture) {
+      activeCapture.stop();
+    }
+    activeCapture = capture;
+    pressedKeys.clear();
+    fieldEl.classList.add("listening");
+    statusEl.textContent = "Press keys...";
+    statusEl.className = "listening";
+    displayEl.innerHTML = '<span style="color: #6366f1">Waiting for input...</span>';
   }
+
+  function stopListening() {
+    if (activeCapture === capture) activeCapture = null;
+    fieldEl.classList.remove("listening");
+  }
+
+  const capture = {
+    stop: () => {
+      stopListening();
+      renderKeysInto(displayEl, captured || original);
+      statusEl.textContent = "";
+      statusEl.className = "";
+    },
+    isActive: () => activeCapture === capture,
+    setOriginal: (val) => { original = val; captured = val; },
+    render: () => renderKeysInto(displayEl, original),
+    handleKeyDown: (e) => {
+      pressedKeys.add(e.key);
+      const modifiers = [];
+      const regular = [];
+      for (const k of pressedKeys) {
+        if (["Meta", "Control", "Alt", "Shift"].includes(k)) modifiers.push(k);
+        else regular.push(k);
+      }
+      const modOrder = ["Control", "Alt", "Shift", "Meta"];
+      modifiers.sort((a, b) => modOrder.indexOf(a) - modOrder.indexOf(b));
+      displayEl.innerHTML = [...modifiers, ...regular]
+        .map((k) => `<span class="key">${keyToDisplay(k)}</span>`)
+        .join("");
+    },
+    handleKeyUp: (e) => {
+      const modifiers = [];
+      const regular = [];
+      for (const k of pressedKeys) {
+        if (["Meta", "Control", "Alt", "Shift"].includes(k)) modifiers.push(k);
+        else regular.push(k);
+      }
+      if (modifiers.length === 0 || regular.length === 0) {
+        pressedKeys.delete(e.key);
+        if (pressedKeys.size === 0) {
+          statusEl.textContent = "Need modifier + key (e.g. \u2318+Shift+Space)";
+          statusEl.className = "error";
+          renderKeysInto(displayEl, captured || original);
+          stopListening();
+        }
+        return;
+      }
+      const modOrder = ["Control", "Alt", "Shift", "Meta"];
+      modifiers.sort((a, b) => modOrder.indexOf(a) - modOrder.indexOf(b));
+      captured = [
+        ...modifiers.map((k) => KEY_TO_ELECTRON[k]),
+        ...regular.map((k) => keyToElectron(k)),
+      ].join("+");
+      pressedKeys.clear();
+      stopListening();
+      renderKeysInto(displayEl, captured);
+      const changed = captured !== original;
+      saveBtn.disabled = !changed;
+      statusEl.textContent = changed ? "Modified" : "";
+      statusEl.className = changed ? "changed" : "";
+    },
+  };
+
+  fieldEl.addEventListener("click", () => { if (!capture.isActive()) startListening(); });
+  fieldEl.addEventListener("focus", () => { if (!capture.isActive()) startListening(); });
+  fieldEl.addEventListener("blur", () => {
+    if (capture.isActive() && pressedKeys.size === 0) capture.stop();
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    if (!captured || captured === original) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+    const result = await saveFn(captured);
+    if (result.success) {
+      original = captured;
+      statusEl.textContent = "Saved!";
+      statusEl.className = "changed";
+    } else {
+      statusEl.textContent = result.error || "Failed to register hotkey";
+      statusEl.className = "error";
+      saveBtn.disabled = false;
+    }
+    saveBtn.textContent = "Save";
+  });
+
+  return capture;
+}
+
+const recordingCapture = createHotkeyCapture({
+  fieldEl: document.getElementById("hotkey-field"),
+  displayEl: document.getElementById("hotkey-display"),
+  statusEl: document.getElementById("hotkey-status"),
+  saveBtn: document.getElementById("btn-save-hotkey"),
+  saveFn: (acc) => whisprly.saveHotkey(acc),
+});
+
+const contextCapture = createHotkeyCapture({
+  fieldEl: document.getElementById("context-hotkey-field"),
+  displayEl: document.getElementById("context-hotkey-display"),
+  statusEl: document.getElementById("context-hotkey-status"),
+  saveBtn: document.getElementById("btn-save-context-hotkey"),
+  saveFn: (acc) => whisprly.saveContextHotkey(acc),
 });
 
 document.addEventListener("keydown", (e) => {
-  if (!isListening) return;
+  if (!activeCapture) return;
   e.preventDefault();
   e.stopPropagation();
-
-  pressedKeys.add(e.key);
-
-  const modifiers = [];
-  const regular = [];
-  for (const k of pressedKeys) {
-    if (["Meta", "Control", "Alt", "Shift"].includes(k)) {
-      modifiers.push(k);
-    } else {
-      regular.push(k);
-    }
-  }
-
-  const modOrder = ["Control", "Alt", "Shift", "Meta"];
-  modifiers.sort((a, b) => modOrder.indexOf(a) - modOrder.indexOf(b));
-
-  const allKeys = [...modifiers, ...regular];
-  hotkeyDisplay.innerHTML = allKeys
-    .map((k) => `<span class="key">${keyToDisplay(k)}</span>`)
-    .join("");
+  activeCapture.handleKeyDown(e);
 });
 
 document.addEventListener("keyup", (e) => {
-  if (!isListening) return;
+  if (!activeCapture) return;
   e.preventDefault();
-
-  const modifiers = [];
-  const regular = [];
-  for (const k of pressedKeys) {
-    if (["Meta", "Control", "Alt", "Shift"].includes(k)) {
-      modifiers.push(k);
-    } else {
-      regular.push(k);
-    }
-  }
-
-  if (modifiers.length === 0 || regular.length === 0) {
-    pressedKeys.delete(e.key);
-    if (pressedKeys.size === 0) {
-      hotkeyStatus.textContent = "Need modifier + key (e.g. \u2318+Shift+Space)";
-      hotkeyStatus.className = "error";
-      renderKeys(capturedAccelerator || originalHotkey);
-      stopListening();
-    }
-    return;
-  }
-
-  const modOrder = ["Control", "Alt", "Shift", "Meta"];
-  modifiers.sort((a, b) => modOrder.indexOf(a) - modOrder.indexOf(b));
-
-  const electronParts = [
-    ...modifiers.map((k) => KEY_TO_ELECTRON[k]),
-    ...regular.map((k) => keyToElectron(k)),
-  ];
-  capturedAccelerator = electronParts.join("+");
-
-  pressedKeys.clear();
-  stopListening();
-
-  renderKeys(capturedAccelerator);
-
-  const changed = capturedAccelerator !== originalHotkey;
-  btnSaveHotkey.disabled = !changed;
-  hotkeyStatus.textContent = changed ? "Modified" : "";
-  hotkeyStatus.className = changed ? "changed" : "";
-});
-
-btnSaveHotkey.addEventListener("click", async () => {
-  if (!capturedAccelerator || capturedAccelerator === originalHotkey) return;
-
-  btnSaveHotkey.disabled = true;
-  btnSaveHotkey.textContent = "Saving...";
-
-  const result = await whisprly.saveHotkey(capturedAccelerator);
-
-  if (result.success) {
-    originalHotkey = capturedAccelerator;
-    hotkeyStatus.textContent = "Saved!";
-    hotkeyStatus.className = "changed";
-    btnSaveHotkey.textContent = "Save Hotkey";
-  } else {
-    hotkeyStatus.textContent = result.error || "Failed to register hotkey";
-    hotkeyStatus.className = "error";
-    btnSaveHotkey.textContent = "Save Hotkey";
-    btnSaveHotkey.disabled = false;
-  }
+  activeCapture.handleKeyUp(e);
 });
 
 // ─── Init ───────────────────────────────────────────────────────
 
 async function init() {
-  const [hotkey] = await Promise.all([
+  const [hotkey, contextHotkey] = await Promise.all([
     whisprly.getCurrentHotkey(),
+    whisprly.getCurrentContextHotkey(),
     loadHistory(),
     loadTones(),
   ]);
 
-  originalHotkey = hotkey;
-  capturedAccelerator = hotkey;
-  renderKeys(hotkey);
-  hotkeyStatus.textContent = "";
+  recordingCapture.setOriginal(hotkey);
+  recordingCapture.render();
+
+  contextCapture.setOriginal(contextHotkey);
+  contextCapture.render();
 }
 
 init();

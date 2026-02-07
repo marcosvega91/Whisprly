@@ -103,4 +103,42 @@ class TestClean:
         user_msg = call_kwargs["messages"][0]["content"]
         assert "<tono>" not in user_msg
         assert "<istruzioni_extra>" not in user_msg
+        assert "<contesto>" not in user_msg
         assert "<trascrizione_grezza>" in user_msg
+
+    @patch("core.cleaner.anthropic.Anthropic")
+    def test_includes_context_in_message(self, mock_cls, mock_anthropic_response):
+        mock_cls.return_value.messages.create.return_value = mock_anthropic_response
+
+        tc = TextCleaner(api_key="test-key")
+        tc.clean("rispondi che va bene", context="Ci vediamo domani alle 10?")
+
+        call_kwargs = mock_cls.return_value.messages.create.call_args.kwargs
+        user_msg = call_kwargs["messages"][0]["content"]
+        assert "<contesto>" in user_msg
+        assert "Ci vediamo domani alle 10?" in user_msg
+        assert "<trascrizione_grezza>" in user_msg
+
+    @patch("core.cleaner.anthropic.Anthropic")
+    def test_context_appears_before_transcription(self, mock_cls, mock_anthropic_response):
+        mock_cls.return_value.messages.create.return_value = mock_anthropic_response
+
+        tc = TextCleaner(api_key="test-key")
+        tc.clean("ok va bene", context="some context")
+
+        call_kwargs = mock_cls.return_value.messages.create.call_args.kwargs
+        user_msg = call_kwargs["messages"][0]["content"]
+        ctx_pos = user_msg.index("<contesto>")
+        raw_pos = user_msg.index("<trascrizione_grezza>")
+        assert ctx_pos < raw_pos
+
+    @patch("core.cleaner.anthropic.Anthropic")
+    def test_omits_context_when_empty(self, mock_cls, mock_anthropic_response):
+        mock_cls.return_value.messages.create.return_value = mock_anthropic_response
+
+        tc = TextCleaner(api_key="test-key")
+        tc.clean("testo", context="")
+
+        call_kwargs = mock_cls.return_value.messages.create.call_args.kwargs
+        user_msg = call_kwargs["messages"][0]["content"]
+        assert "<contesto>" not in user_msg
