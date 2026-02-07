@@ -12,6 +12,11 @@ contextBridge.exposeInMainWorld("whisprly", {
     return config.server?.url || "http://localhost:8899";
   },
 
+  // Window drag
+  getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
+  moveWindow: (x, y) => ipcRenderer.send("move-window", x, y),
+  saveWindowPosition: () => ipcRenderer.send("save-window-position"),
+
   // Actions
   autoPaste: (text) => ipcRenderer.invoke("auto-paste", text),
   notify: (title, body) => ipcRenderer.invoke("notify", title, body),

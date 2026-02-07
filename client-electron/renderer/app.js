@@ -288,9 +288,63 @@ async function toggleRecording() {
   }
 }
 
+// ─── Widget Drag ────────────────────────────────────────────────
+
+let isDragging = false;
+let dragStartScreenX = 0;
+let dragStartScreenY = 0;
+let dragStartWinX = 0;
+let dragStartWinY = 0;
+const DRAG_THRESHOLD = 5;
+
+const iconEl = document.getElementById("icon-container");
+
+iconEl.addEventListener("mousedown", async (e) => {
+  if (e.button !== 0) return;
+
+  dragStartScreenX = e.screenX;
+  dragStartScreenY = e.screenY;
+
+  const pos = await whisprly.getWindowPosition();
+  dragStartWinX = pos.x;
+  dragStartWinY = pos.y;
+
+  isDragging = false;
+
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+});
+
+function onDragMove(e) {
+  const dx = e.screenX - dragStartScreenX;
+  const dy = e.screenY - dragStartScreenY;
+
+  if (!isDragging && Math.abs(dx) + Math.abs(dy) > DRAG_THRESHOLD) {
+    isDragging = true;
+    iconEl.style.cursor = "grabbing";
+  }
+
+  if (isDragging) {
+    whisprly.moveWindow(dragStartWinX + dx, dragStartWinY + dy);
+  }
+}
+
+function onDragEnd() {
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", onDragEnd);
+
+  if (isDragging) {
+    iconEl.style.cursor = "";
+    whisprly.saveWindowPosition();
+    // Prevent the click from firing after drag
+    setTimeout(() => { isDragging = false; }, 50);
+  }
+}
+
 // ─── Widget Click — Open Dashboard ──────────────────────────────
 
-document.getElementById("icon-container").addEventListener("click", () => {
+iconEl.addEventListener("click", () => {
+  if (isDragging) return;
   if (currentState === State.IDLE) {
     whisprly.openDashboard();
   }
@@ -298,7 +352,7 @@ document.getElementById("icon-container").addEventListener("click", () => {
 
 // ─── Context Menu ────────────────────────────────────────────────
 
-document.getElementById("icon-container").addEventListener("contextmenu", (e) => {
+iconEl.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   whisprly.showContextMenu(availableTones, currentTone);
 });

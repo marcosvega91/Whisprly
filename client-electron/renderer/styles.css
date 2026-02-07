@@ -127,7 +127,7 @@ html, body {
 
 #icon-container {
   -webkit-app-region: no-drag;
-  cursor: default;
+  cursor: grab;
 }
 
 

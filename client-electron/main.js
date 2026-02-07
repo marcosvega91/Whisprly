@@ -33,6 +33,26 @@ let dashboardWindow = null;
 let currentToggleAccelerator = null;
 let currentContextAccelerator = null;
 let currentTone = "professionale";
+let positionFilePath = null;
+
+// ─── Window Position Persistence ─────────────────────────────────
+
+function loadPosition() {
+  try {
+    if (positionFilePath && fs.existsSync(positionFilePath)) {
+      return JSON.parse(fs.readFileSync(positionFilePath, "utf8"));
+    }
+  } catch (_) {}
+  return null;
+}
+
+function savePosition(x, y) {
+  try {
+    if (positionFilePath) {
+      fs.writeFileSync(positionFilePath, JSON.stringify({ x, y }), "utf8");
+    }
+  } catch (_) {}
+}
 
 // ─── Window ─────────────────────────────────────────────────────
 
@@ -40,11 +60,15 @@ function createWindow() {
   const { width: screenW, height: screenH } =
     screen.getPrimaryDisplay().workAreaSize;
 
+  const savedPos = loadPosition();
+  const startX = savedPos ? savedPos.x : screenW - 220;
+  const startY = savedPos ? savedPos.y : screenH - 220;
+
   mainWindow = new BrowserWindow({
     width: 200,
     height: 200,
-    x: screenW - 220,
-    y: screenH - 220,
+    x: startX,
+    y: startY,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -225,6 +249,27 @@ function setupIPC() {
   });
 
   ipcMain.handle("quit-app", () => app.quit());
+
+  // ─── Window Drag ──────────────────────────────────────────────
+
+  ipcMain.handle("get-window-position", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return { x: 0, y: 0 };
+    const [x, y] = mainWindow.getPosition();
+    return { x, y };
+  });
+
+  ipcMain.on("move-window", (_, x, y) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setPosition(Math.round(x), Math.round(y));
+    }
+  });
+
+  ipcMain.on("save-window-position", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const [x, y] = mainWindow.getPosition();
+      savePosition(x, y);
+    }
+  });
 
   // ─── Dashboard IPC ─────────────────────────────────────────────
 
@@ -492,7 +537,9 @@ app.whenReady().then(async () => {
   config = loadConfig();
   currentTone = config.tone?.default || "professionale";
 
-  historyDb.init(app.getPath("userData"));
+  const userData = app.getPath("userData");
+  positionFilePath = path.join(userData, "window-position.json");
+  historyDb.init(userData);
 
   // Show dock briefly so permission dialogs can appear
   if (process.platform === "darwin") {
