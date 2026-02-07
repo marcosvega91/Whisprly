@@ -10,6 +10,7 @@ let currentState = State.IDLE;
 let currentTone = "professionale";
 let availableTones = [];
 let serverUrl = "http://localhost:8899";
+let pendingContext = null;
 
 // Audio recording
 let audioContext = null;
@@ -17,6 +18,8 @@ let mediaStream = null;
 let sourceNode = null;
 let processorNode = null;
 let audioChunks = [];
+let silenceCheckTimer = null;
+let micWarningShown = false;
 
 // ─── WAV Encoding ────────────────────────────────────────────────
 
@@ -86,6 +89,15 @@ function startRecording() {
   if (!mediaStream) return;
 
   audioChunks = [];
+  micWarningShown = false;
+
+  // Check that stream tracks are still live
+  const track = mediaStream.getAudioTracks()[0];
+  if (!track || track.readyState !== "live" || !track.enabled) {
+    whisprly.notify("Whisprly", "Microphone not available — check system settings.");
+    showError("Mic unavailable");
+    return false;
+  }
 
   // Create AudioContext at 16kHz for Whisper
   audioContext = new AudioContext({ sampleRate: 16000 });
@@ -101,9 +113,34 @@ function startRecording() {
 
   sourceNode.connect(processorNode);
   processorNode.connect(audioContext.destination);
+
+  // After 1.5s, check if mic is actually capturing audio
+  silenceCheckTimer = setTimeout(() => {
+    if (currentState !== State.RECORDING || audioChunks.length === 0) return;
+    let sumSquares = 0;
+    let totalSamples = 0;
+    for (const chunk of audioChunks) {
+      for (let i = 0; i < chunk.length; i++) {
+        sumSquares += chunk[i] * chunk[i];
+      }
+      totalSamples += chunk.length;
+    }
+    const rms = Math.sqrt(sumSquares / totalSamples);
+    if (rms < 0.005) {
+      micWarningShown = true;
+      whisprly.notify("Whisprly", "Microphone seems muted — check audio input.");
+      showError("Mic muted?");
+    }
+  }, 1500);
+
+  return true;
 }
 
 function stopRecording() {
+  if (silenceCheckTimer) {
+    clearTimeout(silenceCheckTimer);
+    silenceCheckTimer = null;
+  }
   if (processorNode) {
     processorNode.disconnect();
     processorNode = null;
@@ -135,6 +172,9 @@ function stopRecording() {
 function setState(newState) {
   currentState = newState;
   document.body.className = newState;
+  if (pendingContext && newState === State.RECORDING) {
+    document.body.classList.add("context");
+  }
 }
 
 function showSuccess() {
@@ -174,7 +214,7 @@ async function toggleRecording() {
 
   if (currentState === State.IDLE) {
     // Start recording
-    startRecording();
+    if (startRecording() === false) return;
     setState(State.RECORDING);
     whisprly.notify("Whisprly", "Recording started... Press again to stop.");
     console.log("Recording started");
@@ -196,6 +236,9 @@ async function toggleRecording() {
       const formData = new FormData();
       formData.append("audio", wavBlob, "recording.wav");
       formData.append("tone", currentTone);
+      if (pendingContext) {
+        formData.append("context", pendingContext);
+      }
 
       const response = await fetch(`${serverUrl}/process`, {
         method: "POST",
@@ -220,15 +263,18 @@ async function toggleRecording() {
         cleanText: result.clean_text,
         rawText: result.raw_text,
         tone: currentTone,
+        hasContext: !!pendingContext,
       });
 
       const preview = result.clean_text.slice(0, 100);
       whisprly.notify("Whisprly", `Pasted!\n${preview}`);
 
+      pendingContext = null;
       setState(State.IDLE);
       showSuccess();
     } catch (err) {
       console.error("Processing error:", err);
+      pendingContext = null;
       const msg =
         err.name === "TimeoutError"
           ? "Timeout: server did not respond"
@@ -286,6 +332,12 @@ async function init() {
 
   // Listen for hotkey toggle
   whisprly.onToggleRecording(toggleRecording);
+
+  // Listen for context recording toggle
+  whisprly.onToggleRecordingWithContext((context) => {
+    pendingContext = context;
+    toggleRecording();
+  });
 
   // Listen for tone changes from context menu
   whisprly.onToneChanged((tone) => {
